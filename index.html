@@ -186,13 +186,18 @@ function renderModulation(){
  document.getElementById("modOut").innerHTML=html;
 }
 async function init(){
- DB=await fetch("data.json").then(r=>r.json());
+ try { DB=await fetch("./data.json?v=5", {cache:"no-store"}).then(r=>r.json());
  Object.entries(DB.sheets).forEach(([k,v])=>sheetMap[k]=v);
  const chordSet=new Set(["C","Cm","C7","Cmaj7","Cm7","C6","Cadd9","Csus4","C/E","C/G"]);
  for(const r of allRows("DB_コード")) Object.values(r).forEach(v=>{let s=String(v??"").trim();if(/^[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add|7|6|9|11|13|\/)?/.test(s)&&s.length<15)chordSet.add(s)});
  fill("homeKey",keys);fill("chordKey",keys);fill("scaleRoot",keys);fill("fromKey",keys);fill("toKey",keys);fill("homeChord",[...chordSet]);fill("chordSelect",[...chordSet]);
  document.getElementById("stats").textContent=`${DB.sheet_names.length}シート / ${Object.values(DB.sheets).reduce((n,s)=>n+(s.rows?.length||0),0).toLocaleString()}行`;
  renderChord();renderScale();
+}
+ } catch(e) {
+   document.getElementById("stats").textContent="DB読み込みエラー";
+   console.error(e);
+ }
 }
 init();
 </script>
