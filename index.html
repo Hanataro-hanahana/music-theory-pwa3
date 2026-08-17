@@ -40,9 +40,9 @@ label{display:block;color:var(--sub);font-size:12px;font-weight:700;margin:12px 
 <div class="card" id="dbSummary"></div>
 </section>
 
-<section id="chord" class="page"><button class="back" data-page="home">‹ ホーム</button><div class="card"><h2>🎹 コード辞典</h2><p class="muted">基本コードを検索します。分数コードは専用の「分数コード」から探せます。</p><label>コード名</label><input id="cq" list="codes" placeholder="例：Cmaj7、Am7"><datalist id="codes"></datalist><button class="primary" id="cbtn">コードを調べる</button><div id="cout" class="result"></div></div></section>
+<section id="chord" class="page"><button class="back" data-page="home">‹ ホーム</button><div class="card"><h2>🎹 コード辞典</h2><p class="muted">基本コードを検索します。分数コードは専用の「分数コード」から探せます。</p><label>コード名</label><select id="codes"></select><button class="primary" id="cbtn">コードを調べる</button><div id="cout" class="result"></div></div></section>
 
-<section id="fraction" class="page"><button class="back" data-page="home">‹ ホーム</button><div class="hero"><h2>🎹 分数コード</h2><p>上のコードと低音を分けて指定するコード。ベースラインやペダルポイント、滑らかな進行に使います。</p></div><div class="card"><h2>条件から探す</h2><label>ベース音</label><select id="fbass"></select><label>分類</label><select id="fclass"></select><label>パターン</label><select id="fpat"></select><button class="primary" id="fbtn">分数コードを見る</button><div id="fout" class="result"></div></div><div class="card"><h2>分数コード名で検索</h2><input id="fq" placeholder="例：C/E、G/B、F/A"><button class="primary" id="fqbtn">検索</button><div id="fqout" class="result"></div></div></section>
+<section id="fraction" class="page"><button class="back" data-page="home">‹ ホーム</button><div class="hero"><h2>🎹 分数コード</h2><p>上のコードと低音を分けて指定するコード。ベースラインやペダルポイント、滑らかな進行に使います。</p></div><div class="card"><h2>条件から探す</h2><label>ベース音</label><select id="fbass"></select><label>分類</label><select id="fclass"></select><label>パターン</label><select id="fpat"></select><button class="primary" id="fbtn">分数コードを見る</button><p class="muted">ベース音・分類・パターンを選ぶと、実データから候補を表示します。</p><div id="fout" class="result"></div></div><div class="card"><h2>分数コード名で検索</h2><input id="fq" placeholder="例：C/E、G/B、F/A"><button class="primary" id="fqbtn">検索</button><div id="fqout" class="result"></div></div></section>
 <section id="progress" class="page"><button class="back" data-page="home">‹ ホーム</button><div class="card"><h2>🔄 コード進行</h2><label>進行タイプ</label><select id="pt"></select><button class="primary" id="pbtn">進行候補を見る</button><div id="pout" class="result"></div></div><div class="card"><h2>実コードで検索</h2><input id="pq" placeholder="例：C - G - Am - F"><button class="primary" id="p2btn">検索</button><div id="p2out" class="result"></div></div></section>
 
 <section id="scale" class="page"><button class="back" data-page="home">‹ ホーム</button><div class="card"><h2>🎼 スケール</h2><label>キー</label><select id="sk"></select><label>種類</label><select id="sm"><option>メジャー</option><option>マイナー</option></select><button class="primary" id="sbtn">スケールを見る</button><div id="sout" class="result"></div></div></section>
@@ -51,14 +51,14 @@ label{display:block;color:var(--sub);font-size:12px;font-weight:700;margin:12px 
 
 <section id="compose" class="page"><button class="back" data-page="home">‹ ホーム</button>
 <div class="card"><h2>✍️ 作曲支援</h2><label>方向・テーマ</label><select id="co"></select><button class="primary" id="cobtn">アイデアを見る</button><div id="coout" class="result"></div></div>
-<div class="card"><h2>🎸 オルタナ・作曲</h2><p class="muted">オルタナを独立機能にせず、作曲の方向性として選べます。80s〜90s、Radiohead系、エモ、ポストロック、現代オルタナなど。</p><label>スタイル</label><select id="alts"></select><button class="primary" id="altsbtn">作曲アイデアを見る</button><div id="altsout" class="result"></div></div>
+</div>
 <div class="card"><h2>🎤 メロディ</h2><select id="me"></select><button class="primary" id="mebtn">候補を見る</button><div id="meout" class="result"></div></div></section>
 
 
 
 <section id="arrange" class="page"><button class="back" data-page="home">‹ ホーム</button>
 <div class="card"><h2>🎸 アレンジ</h2><label>方向・進行</label><select id="ar"></select><button class="primary" id="arbtn">アイデアを見る</button><div id="arout" class="result"></div></div>
-<div class="card"><h2>🎸 オルタナ・アレンジ</h2><p class="muted">オルタナ特有のギター、ベース、ドラム、ダイナミクス、空間処理をアレンジ案として表示します。</p><label>アレンジ技法</label><select id="altar"></select><button class="primary" id="altarbtn">アレンジを見る</button><div id="altarout" class="result"></div></div></section>
+</div></section>
 
 <section id="search" class="page"><button class="back" data-page="home">‹ ホーム</button><div class="card"><h2>🔎 全DB検索</h2><input id="gq" placeholder="何でも検索"><button class="primary" id="gbtn">検索</button><div id="gout" class="result"></div></div></section>
 </main>
