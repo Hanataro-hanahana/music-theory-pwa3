@@ -1,25 +1,21 @@
 # 音楽理論アシスタント PWA
 
-## GitHub Pagesで公開する手順
+## 今回の追加
+- 既存DBを維持
+- オルタナ進行11件
+- オルタナ・アレンジ12件
+- オルタナ・スタイル7件
+- 80年代、90年代、Radiohead系、エモ、ポストロック、現代オルタナ、NEO TOKYOを収録
+- PWAキャッシュを更新
 
-1. GitHubで「New repository」を選択
-2. Repository名を例 `music-theory-app` とする
-3. **Public** を選択して作成
-4. このフォルダ内のファイルをすべてアップロード
-5. **Settings → Pages**
-6. **Source: Deploy from a branch**
-7. **Branch: main / root**
-8. **Save**
-9. 発行されたURLをiPhoneのSafariで開く
-10. Safariの共有ボタン → **ホーム画面に追加**
+## GitHub Pages
+Settings → Pages → Deploy from a branch → main / root → Save
 
-## 同じ階層に置くファイル
+同じ階層に全ファイルを置いてください。
 
-- index.html
-- data.json
-- manifest.webmanifest
-- sw.js
-- icon-180.png
-- .nojekyll
 
-この版は元Excelの30シート、約3,000行の実データをJSONとして利用します。
+## 今回のUI変更
+- コード辞典から「分数コード」を独立した専用画面へ分離
+- 通常コード辞典ではスラッシュ付きベース指定コードを除外（C6/9などのコード品質は通常コードとして維持）
+- 分数コードはベース音・分類・パターンの3条件から検索可能
+- 分数コード名の直接検索にも対応
