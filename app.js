@@ -45,7 +45,14 @@ const progs=rows("DB_進行");
 if(byId("total"))byId("total").textContent=Object.values(D).reduce((n,s)=>n+(s?.rows?.length||0),0).toLocaleString()+"件";
 if(byId("dbSummary"))byId("dbSummary").innerHTML=Object.entries(D).map(([n,s])=>`<div class="item"><b>${esc(n)}</b><div class="muted">${(s?.rows?.length||0).toLocaleString()}件</div></div>`).join("");
 
-opts("codes",codes.map(r=>r["コード"]));
+const chordRoots=uniq(codes.map(r=>String(r["コード"]||"").match(/^([A-G](?:#|b)?)/)?.[1]));
+function updateChordTypes(){
+  const root=byId("chordRoot")?.value;
+  opts("codes",codes.filter(r=>String(r["コード"]||"").match(/^([A-G](?:#|b)?)/)?.[1]===root).map(r=>r["コード"]));
+}
+opts("chordRoot",chordRoots);
+updateChordTypes();
+byId("chordRoot")?.addEventListener("change",updateChordTypes);
 opts("pt",progs.map(r=>r["進行タイプ"]));
 opts("co",rows("DB_作曲").map(r=>r["方向"]));
 opts("me",rows("DB_メロディ").map(r=>r["進行タイプ"]));

@@ -1,4 +1,4 @@
-const CACHE="music-theory-chord-diagram-tensions-v2";
+const CACHE="music-theory-chords-by-key-v3";
 const ASSETS=["./","./index.html","./db.js","./app.js","./manifest.webmanifest","./icon-180.png"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
