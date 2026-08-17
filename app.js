@@ -105,17 +105,24 @@ byId("sbtn")?.addEventListener("click",()=>{
   const rs=scaleRows.filter(r=>r["キー種別"]===kind&&r["キー"]===key);
   const notes=scaleNotes(key,kind);
   const e=byId("sout"); if(!e)return;
-  e.innerHTML=`<div class="resultbox"><b>${esc(key)} ${esc(kind)}</b><div class="scaleNotes">${notes.map(n=>`<span class="tag">${esc(n)}</span>`).join("")}</div><div class="muted">${kind==="マイナー"?"ナチュラルマイナーの構成音":"メジャースケールの構成音"}</div></div>`+
-    (rs.length?rs.map(r=>`<div class="resultbox">${Object.entries(r).filter(([k,v])=>String(v??"").trim()).map(([k,v])=>`<div class="item"><b>${esc(k)}</b><div class="value">${esc(v)}</div></div>`).join("")}</div>`).join(""):`<div class="muted">解決音DBに該当データがありません。</div>`);
+  const detailOrder=["実音","度数/名前","役割","説明","解決先","使い方"];
+  e.innerHTML=`<div class="resultbox"><div class="scaleNotes">${notes.map(n=>`<span class="tag">${esc(n)}</span>`).join("")}</div><div class="muted">${esc(key)} ${kind==="マイナー"?"ナチュラルマイナー":"メジャー"}の実音</div></div>`+
+    (rs.length?rs.map(r=>`<div class="resultbox">${detailOrder.filter(k=>String(r[k]??"").trim()).map(k=>`<div class="item"><b>${esc(k==="度数/名前"?"度数":k)}</b><div class="value">${esc(r[k])}</div></div>`).join("")}</div>`).join(""):`<div class="muted">解決音DBに該当データがありません。</div>`);
 });
 
 // ---------- Modulation ----------
 const modRows=rows("DB_転調");
 const modKeys=uniq(modRows.map(r=>r["現在キー"]));
-opts("mk1",modKeys); opts("mk2",modKeys);
+opts("mk1",modKeys);
 function recommendedTargets(row){
   return String(row?.["転調しやすいキー"]||"").split("/").map(x=>x.trim()).filter(Boolean);
 }
+function updateModTargets(){
+  const row=modRows.find(r=>r["現在キー"]===byId("mk1")?.value);
+  opts("mk2",recommendedTargets(row));
+}
+updateModTargets();
+byId("mk1")?.addEventListener("change",updateModTargets);
 byId("mbtn")?.addEventListener("click",()=>{
   const from=byId("mk1")?.value,to=byId("mk2")?.value,row=modRows.find(r=>r["現在キー"]===from);
   const e=byId("mout"); if(!e)return;
@@ -189,11 +196,14 @@ function parseFormList(row){
 function noteTokens(value){
   return uniq(String(value||"").match(/[A-G](?:#|b)?/g)||[]).filter(n=>NOTE_PC[n]!==undefined);
 }
-function tensionNotes(row){
+function tensionEntries(row){
   // Only parenthesized note names from the DB's "使えるテンション" field are accepted.
   // If the DB does not name a pitch, nothing is inferred or added.
   const value=String(row?.["使えるテンション"]||""),out=[];
-  for(const m of value.matchAll(/\(([A-G](?:#|b)?)\)/g))if(NOTE_PC[m[1]]!==undefined&&!out.includes(m[1]))out.push(m[1]);
+  for(const m of value.matchAll(/([b#]?(9|11|13))\s*\(([A-G](?:#|b)?)\)/g)){
+    const entry={degree:m[1],family:m[2],note:m[3],pc:NOTE_PC[m[3]]};
+    if(entry.pc!==undefined&&!out.some(x=>x.degree===entry.degree&&x.pc===entry.pc))out.push(entry);
+  }
   return out;
 }
 function chordSvg(code,notation,row=null,showToneMap=false){
@@ -208,23 +218,27 @@ function chordSvg(code,notation,row=null,showToneMap=false){
   for(let j=0;j<fretCount;j++){const fret=start+j,x=left+colW*(j+.5);svg+=`<text x="${x}" y="54" text-anchor="middle" font-size="14" font-weight="800">${fret}</text>`}
   for(let i=0;i<6;i++){const y=top+rowH*i;svg+=`<text x="34" y="${y+5}" text-anchor="middle" font-size="14" font-weight="800">${i+1}弦</text><line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#222" stroke-width="2"/>`}
   for(let j=0;j<=fretCount;j++){const x=left+colW*j;svg+=`<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="#222" stroke-width="${j===0&&start===1?5:2}"/>`}
-  const chordPcs=new Set(noteTokens(row?.["構成音"]).map(n=>NOTE_PC[n]));
-  const tensions=tensionNotes(row),tensionByPc=new Map(tensions.map(n=>[NOTE_PC[n],n]));
+  const chordPcs=new Set(noteTokens(row?.["構成音"]).map(n=>NOTE_PC[n])),parsed=parseChordName(code),rootPc=NOTE_PC[parsed?.root];
+  const sounding=raw.map((f,i)=>f>=0?{pc:(TUNING_PC[i]+f)%12,midi:TUNING_MIDI[i]+f}:null).filter(Boolean);
+  const lowestRoot=sounding.filter(x=>x.pc===rootPc).sort((a,b)=>a.midi-b.midi)[0]||sounding.sort((a,b)=>a.midi-b.midi)[0];
+  const tensions=tensionEntries(row),tensionByPc=new Map(tensions.map(x=>[x.pc,x]));
+  const tensionColor={9:"#f59e0b",11:"#10b981",13:"#8b5cf6"};
   if(showToneMap&&row){
     for(let i=0;i<6;i++)for(let j=0;j<fretCount;j++){
-      const fret=start+j,pc=(TUNING_PC[5-i]+fret)%12,x=left+colW*(j+.5),y=top+rowH*i;
-      if(tensionByPc.has(pc))svg+=`<circle cx="${x}" cy="${y}" r="8" fill="#f59e0b" opacity=".9"/><text x="${x}" y="${y+3.5}" text-anchor="middle" font-size="8" font-weight="800" fill="white">T</text>`;
+      const fret=start+j,stringIndex=5-i,pc=(TUNING_PC[stringIndex]+fret)%12,midi=TUNING_MIDI[stringIndex]+fret,x=left+colW*(j+.5),y=top+rowH*i,t=tensionByPc.get(pc);
+      if(t&&(!lowestRoot||midi>lowestRoot.midi))svg+=`<circle cx="${x}" cy="${y}" r="9" fill="${tensionColor[t.family]}" opacity=".92"/><text x="${x}" y="${y+3.5}" text-anchor="middle" font-size="7.5" font-weight="800" fill="white">${esc(t.degree)}</text>`;
       else if(chordPcs.has(pc))svg+=`<circle cx="${x}" cy="${y}" r="6" fill="#93c5fd" opacity=".8"/>`;
     }
   }
   for(let i=0;i<6;i++){
     const val=display[i],y=top+rowH*i;
-    if(val===0)svg+=`<text x="61" y="${y+5}" text-anchor="middle" font-size="17" font-weight="800">○</text>`;
+    const stringIndex=5-i,playedPc=val>=0?(TUNING_PC[stringIndex]+val)%12:null,isLowestRoot=val>=0&&playedPc===rootPc&&lowestRoot&&TUNING_MIDI[stringIndex]+val===lowestRoot.midi;
+    if(val===0)svg+=isLowestRoot?`<circle cx="61" cy="${y}" r="11" fill="#dc2626"/><text x="61" y="${y+4}" text-anchor="middle" font-size="10" font-weight="800" fill="white">R</text>`:`<text x="61" y="${y+5}" text-anchor="middle" font-size="17" font-weight="800">○</text>`;
     else if(val<0)svg+=`<text x="61" y="${y+5}" text-anchor="middle" font-size="17" font-weight="800">×</text>`;
-    else{const rel=val-start;if(rel>=0&&rel<fretCount){const x=left+colW*(rel+.5);svg+=`<circle cx="${x}" cy="${y}" r="11" fill="#1d4ed8" stroke="white" stroke-width="2"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="10" font-weight="800" fill="white">${val}</text>`}}
+    else{const rel=val-start;if(rel>=0&&rel<fretCount){const x=left+colW*(rel+.5);svg+=`<circle cx="${x}" cy="${y}" r="11" fill="${isLowestRoot?"#dc2626":"#1d4ed8"}" stroke="white" stroke-width="2"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="${isLowestRoot?10:9}" font-weight="800" fill="white">${isLowestRoot?"R":val}</text>`}}
   }
   svg+=`<text x="180" y="248" text-anchor="middle" font-size="11" fill="#667085">上：1弦 / 下：6弦　数字：実フレット番号</text>`;
-  if(showToneMap&&row)svg+=`<circle cx="90" cy="264" r="6" fill="#93c5fd"/><text x="101" y="268" font-size="10" fill="#475467">コードトーン</text><circle cx="205" cy="264" r="7" fill="#f59e0b"/><text x="216" y="268" font-size="10" fill="#475467">DBテンション${tensions.length?` (${esc(tensions.join("/"))})`:" (登録なし)"}</text>`;
+  if(showToneMap&&row)svg+=`<circle cx="65" cy="264" r="6" fill="#dc2626"/><text x="76" y="268" font-size="9" fill="#475467">最低R</text><circle cx="120" cy="264" r="6" fill="#f59e0b"/><text x="130" y="268" font-size="9" fill="#475467">9系</text><circle cx="174" cy="264" r="6" fill="#10b981"/><text x="184" y="268" font-size="9" fill="#475467">11系</text><circle cx="235" cy="264" r="6" fill="#8b5cf6"/><text x="245" y="268" font-size="9" fill="#475467">13系</text><text x="285" y="268" font-size="9" fill="#475467">${tensions.length?"DB登録":"登録なし"}</text>`;
   svg+=`</svg>`;
   return svg;
 }
@@ -359,6 +373,17 @@ function priorityHtml(row,forBass=false){
   }
   return `<div class="priorityBox"><div class="priorityTitle">🎯 コードを作るときの音の優先順位</div><div class="priorityRow"><b>最優先：</b>${first.length?first.map(n=>`<span class="priorityPill">${esc(n)}</span>`).join(""):"<span class='muted'>構成音を均等に</span>"}</div><div class="priorityRow"><b>その後に追加：</b>${second.length?second.map(n=>`<span class="priorityPill secondaryPill">${esc(n)}</span>`).join(""):"<span class='muted'>必要に応じてオクターブや重複音</span>"}</div>${forBass&&c?`<div class="muted">ベースが${esc(c.root)}（Root）を担当する前提では、ギターのRoot重複を減らします。</div>`:""}</div>`;
 }
+const CHORD_SCALE_GUIDE={
+  Ionian:"明るく安定した基本のメジャー",Lydian:"#11の浮遊感が特徴",Mixolydian:"ドミナント7の基本。b7を含む",
+  Dorian:"マイナーに明るい6度を加える",Aeolian:"暗く自然なナチュラルマイナー","Minor Pentatonic":"安全に使いやすい5音マイナー",
+  Locrian:"m7b5に対応するb2・b5の響き","Lydian Dominant":"7コードに#11の浮遊感",Altered:"ドミナントの強い緊張感。b9・#9・b13系",
+  "Whole Tone":"augや#5に合う全音音階","Half-Whole Diminished":"7b9系の対称的な緊張感","Whole-Half Diminished":"dim7に対応する対称音階"
+};
+function chordScaleHtml(row){
+  const names=String(row?.["使えるスケール"]||"").split("/").map(x=>x.trim()).filter(Boolean);
+  if(!names.length)return"";
+  return `<div class="scaleGuide"><b>🎼 使えるスケール</b>${names.map(n=>`<div class="scaleGuideItem"><strong>${esc(n)}</strong><span>${esc(CHORD_SCALE_GUIDE[n]||"このコードに対応するDB登録スケール")}</span></div>`).join("")}</div>`;
+}
 function showChordDiagram(id,code){
   const box=byId(id),row=codes.find(r=>r["コード"]===code);if(!box||!row)return;
   const c=dictionaryForms(code).basic;
@@ -379,10 +404,11 @@ byId("cbtn")?.addEventListener("click",()=>{
   if(row){
     const clean={};
     for(const [k,v] of Object.entries(row)){
-      if(["フォーム候補","最優先音","次に追加する音","置換/関連"].includes(k))continue;
+      if(["フォーム候補","最優先音","次に追加する音","置換/関連","使えるスケール"].includes(k))continue;
       clean[k]=v;
     }
     render("cout",[clean]);
+    const out=byId("cout");if(out)out.innerHTML+=chordScaleHtml(row);
   }else render("cout",[]);
   showChordDiagram("chordGuitar",code);
   showSameChordVoicings("chordVoicings",code);
@@ -393,8 +419,13 @@ const G=rows("DB_ギター");
 opts("gcode",codes.map(r=>r["コード"]));
 opts("gcat",uniq(G.map(r=>r["カテゴリ"])));
 function updateGItems(){opts("gitem",G.filter(r=>r["カテゴリ"]===byId("gcat")?.value).map(r=>r["項目"]))}
+function guitarFormList(code){
+  const all=chordCandidates(code),basic=dictionaryForms(code).basic;if(!basic)return all;
+  const key=basic.form.join(",");
+  return [{...basic,label:"基本フォーム"},...all.filter(x=>x.form.join(",")!==key)];
+}
 function updateGForms(){
-  const code=byId("gcode")?.value,list=chordCandidates(code),el=byId("gform");if(!el)return;
+  const code=byId("gcode")?.value,list=guitarFormList(code),el=byId("gform");if(!el)return;
   el.innerHTML=list.map((x,i)=>`<option value="${i}">${i+1}. ${esc(x.label)}｜6→1弦：${esc(fingeringText(x.form))}｜${esc(x.difficulty.label)}</option>`).join("");
 }
 updateGItems();updateGForms();
@@ -402,7 +433,7 @@ byId("gcat")?.addEventListener("change",updateGItems);
 byId("gcode")?.addEventListener("change",updateGForms);
 byId("gbtnTech")?.addEventListener("click",()=>render("guitarTechOut",G.filter(r=>r["カテゴリ"]===byId("gcat")?.value&&r["項目"]===byId("gitem")?.value)));
 byId("gbtnChord")?.addEventListener("click",()=>{
-  const code=byId("gcode")?.value,list=chordCandidates(code),idx=Number(byId("gform")?.value||0),c=list[idx],box=byId("guitarChordOut");
+  const code=byId("gcode")?.value,list=guitarFormList(code),idx=Number(byId("gform")?.value||0),c=list[idx],box=byId("guitarChordOut");
   if(!box)return;
   box.innerHTML=c?`<div class="chordDiagram"><h3>🎸 ${esc(code)} の押さえ方</h3>${chordSvg(code,c.form)}<div class="muted" style="text-align:center">6弦→1弦：${esc(fingeringText(c.form))} <span class="difficulty">難易度：${esc(c.difficulty.label)}</span></div></div>`:`<div class="muted">押さえ方データがありません。</div>`;
 });
