@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="音楽理論">
+<link rel="manifest" href="./manifest.webmanifest">
+<title>音楽理論アシスタント</title>
+<style>
+:root{--bg:#f3f5f8;--card:#fff;--ink:#101828;--muted:#667085;--line:#dfe3ea;--accent:#111827;--soft:#eef2f6}
+*{box-sizing:border-box}html{background:var(--bg)}body{margin:0;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",sans-serif;background:var(--bg)}
+header{position:sticky;top:0;z-index:20;background:rgba(11,18,32,.97);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 13px}
+header h1{margin:0;font-size:21px}.subtitle{font-size:11px;opacity:.7;margin-top:3px}
+main{max-width:820px;margin:auto;padding:14px 14px calc(92px + env(safe-area-inset-bottom))}
+section{display:none}.active{display:block}
+.card{background:var(--card);border:1px solid #e9edf2;border-radius:18px;padding:15px;margin-bottom:12px;box-shadow:0 2px 12px rgba(16,24,40,.05)}
+h2{font-size:18px;margin:0 0 13px}h3{font-size:15px;margin:14px 0 8px}.muted{color:var(--muted);font-size:12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px}
+select,input,textarea,button{font:inherit}select,input,textarea{width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;padding:11px 12px;font-size:16px;color:var(--ink)}
+textarea{min-height:90px;resize:vertical}.btn{width:100%;border:0;border-radius:12px;padding:12px;background:var(--accent);color:#fff;font-weight:750;margin-top:10px}.btn.secondary{background:var(--soft);color:var(--ink)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:9px}.tile{border:1px solid var(--line);background:#fff;border-radius:14px;padding:13px;text-align:left;font-weight:700}.tile span{display:block;font-size:11px;color:var(--muted);font-weight:500;margin-top:3px}
+.chord{font-size:30px;font-weight:850;letter-spacing:-1px}.pill{display:inline-block;background:var(--soft);border-radius:999px;padding:5px 9px;margin:3px 3px 0 0;font-size:12px}
+.result{font-size:14px;line-height:1.65}.empty{padding:18px 5px;text-align:center;color:var(--muted);font-size:13px}
+.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.copy{width:auto;padding:8px 11px;margin:0}
+table{width:100%;border-collapse:collapse;font-size:12px}td,th{border-bottom:1px solid var(--line);padding:8px 5px;text-align:left;vertical-align:top}th{color:var(--muted)}
+nav{position:fixed;z-index:30;left:0;right:0;bottom:0;background:rgba(255,255,255,.97);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:7px 6px calc(7px + env(safe-area-inset-bottom))}
+nav button{border:0;background:none;color:#475467;font-size:11px;padding:5px 2px}nav button.activeNav{color:#111827;font-weight:800}
+.searchItem{padding:12px 0;border-bottom:1px solid var(--line)}.searchItem:last-child{border:0}.searchTitle{font-weight:800}.searchMeta{font-size:11px;color:var(--muted);margin-top:3px}
+small.note{display:block;color:var(--muted);font-size:11px;margin-top:8px}
+@media(min-width:700px){.tiles{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<header><h1>🎵 音楽理論アシスタント</h1><div class="subtitle">作曲・コード・進行・スケール・転調を1つに</div></header>
+
+<main>
+<section id="home" class="active">
+  <div class="card">
+    <h2>今日の作曲スタート</h2>
+    <div class="grid">
+      <div><label>KEY</label><select id="homeKey"></select></div>
+      <div><label>コード</label><select id="homeChord"></select></div>
+    </div>
+    <button class="btn" onclick="showChord()">コードを調べる</button>
+  </div>
+  <div class="card">
+    <h2>よく使う機能</h2>
+    <div class="tiles">
+      <button class="tile" onclick="openTab('chord')">🎹 コード<span>構成音・関連情報</span></button>
+      <button class="tile" onclick="openTab('progress')">🔄 進行<span>実データ検索・分析</span></button>
+      <button class="tile" onclick="openTab('scale')">🎼 スケール<span>キー別候補</span></button>
+      <button class="tile" onclick="openTab('modulation')">↔︎ 転調<span>転調DB検索</span></button>
+      <button class="tile" onclick="openTab('compose')">✍️ 作曲<span>作曲DB検索</span></button>
+      <button class="tile" onclick="openTab('melody')">🎤 メロディ<span>メロディ支援</span></button>
+      <button class="tile" onclick="openTab('arrange')">🎸 アレンジ<span>アレンジ支援</span></button>
+      <button class="tile" onclick="openTab('search')">🔎 全データ<span>30シート横断検索</span></button>
+    </div>
+  </div>
+  <div class="card"><div class="muted">読み込みデータ</div><div style="font-size:25px;font-weight:850" id="stats"></div><small class="note">元Excelの実データをアプリ内データベースとして使用しています。</small></div>
+</section>
+
+<section id="chord">
+  <div class="card"><h2>🎹 コード検索</h2>
+    <div class="grid"><div><label>KEY</label><select id="chordKey"></select></div><div><label>コード</label><select id="chordSelect"></select></div></div>
+    <button class="btn" onclick="renderChord()">表示</button>
+  </div>
+  <div id="chordOut" class="card result"></div>
+</section>
+
+<section id="progress">
+  <div class="card"><h2>🔄 コード進行</h2>
+    <label>進行を入力</label><textarea id="progressInput" placeholder="例：C - G - Am - F"></textarea>
+    <button class="btn" onclick="analyzeProgress()">進行を分析</button>
+  </div>
+  <div class="card"><h3>実データから探す</h3><label>キーワード</label><input id="progressSearch" placeholder="例：王道 / カノン / J-POP"><button class="btn secondary" onclick="searchSheet('DB_進行','progressSearch','progressDbOut')">進行DBを検索</button></div>
+  <div id="progressOut" class="card result"></div><div id="progressDbOut" class="card result"></div>
+</section>
+
+<section id="scale">
+  <div class="card"><h2>🎼 スケール</h2><div class="grid"><div><label>ROOT</label><select id="scaleRoot"></select></div><div><label>モード</label><select id="scaleMode"><option>Major / Ionian</option><option>Dorian</option><option>Phrygian</option><option>Lydian</option><option>Mixolydian</option><option>Aeolian / Natural Minor</option><option>Locrian</option></select></div></div><button class="btn" onclick="renderScale()">表示</button></div>
+  <div id="scaleOut" class="card result"></div>
+</section>
+
+<section id="modulation">
+  <div class="card"><h2>↔︎ 転調支援</h2><div class="grid"><div><label>元KEY</label><select id="fromKey"></select></div><div><label>移動先KEY</label><select id="toKey"></select></div></div><button class="btn" onclick="renderModulation()">転調候補を探す</button></div>
+  <div id="modOut" class="card result"></div>
+</section>
+
+<section id="compose"><div class="card"><h2>✍️ 作曲支援</h2><label>キーワード</label><input id="composeSearch" placeholder="例：Aメロ / サビ / 展開 / 感情"><button class="btn" onclick="searchSheet('DB_作曲','composeSearch','composeOut')">作曲DBを検索</button></div><div id="composeOut" class="card result"></div></section>
+<section id="melody"><div class="card"><h2>🎤 メロディ支援</h2><label>キーワード</label><input id="melodySearch" placeholder="例：跳躍 / 音域 / サビ"><button class="btn" onclick="searchSheet('DB_メロディ','melodySearch','melodyOut')">メロディDBを検索</button></div><div id="melodyOut" class="card result"></div></section>
+<section id="arrange"><div class="card"><h2>🎸 アレンジ支援</h2><label>キーワード</label><input id="arrangeSearch" placeholder="例：ギター / ドラム / サビ"><button class="btn" onclick="searchSheet('DB_アレンジ','arrangeSearch','arrangeOut')">アレンジDBを検索</button></div><div id="arrangeOut" class="card result"></div></section>
+
+<section id="search"><div class="card"><h2>🔎 全データ検索</h2><input id="globalSearch" placeholder="コード、進行、スケール、転調など"><button class="btn" onclick="globalSearch()">30シートを横断検索</button></div><div id="globalOut" class="card result"></div></section>
+</main>
+
+<nav>
+<button data-tab="home" onclick="openTab('home')">🏠<br>ホーム</button>
+<button data-tab="chord" onclick="openTab('chord')">🎹<br>コード</button>
+<button data-tab="progress" onclick="openTab('progress')">🔄<br>進行</button>
+<button data-tab="scale" onclick="openTab('scale')">🎼<br>スケール</button>
+<button data-tab="search" onclick="openTab('search')">🔎<br>検索</button>
+</nav>
+
+<script>
+let DB=null, sheetMap={};
+const keys=["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
+const intervals=[0,2,4,5,7,9,11];
+const modes={ "Major / Ionian":[0,2,4,5,7,9,11], Dorian:[0,2,3,5,7,9,10], Phrygian:[0,1,3,5,7,8,10], Lydian:[0,2,4,6,7,9,11], Mixolydian:[0,2,4,5,7,9,10], "Aeolian / Natural Minor":[0,2,3,5,7,8,10], Locrian:[0,1,3,5,6,8,10]};
+const pc={C:0,"C#":1,Db:1,D:2,"D#":3,Eb:3,E:4,F:5,"F#":6,Gb:6,G:7,"G#":8,Ab:8,A:9,"A#":10,Bb:10,B:11};
+const names=["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+function fill(id,arr){document.getElementById(id).innerHTML=[...new Set(arr)].map(x=>`<option>${esc(x)}</option>`).join("")}
+function allRows(sheet){return (DB?.sheets?.[sheet]?.rows)||[]}
+function rowText(r){return Object.values(r).map(v=>String(v??"")).join(" ")}
+function titleFor(r,headers){let vals=headers.map(h=>r[h]).filter(v=>String(v??"").trim());return String(vals[0]??"");}
+function openTab(id){document.querySelectorAll("main section").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("activeNav",b.dataset.tab===id));window.scrollTo(0,0)}
+function renderRows(rows, limit=40){
+ if(!rows.length)return '<div class="empty">該当データがありません。</div>';
+ const headers=DB.sheets[rows[0]._sheet]?.headers||[];
+ return rows.slice(0,limit).map(r=>`<div class="searchItem"><div class="searchTitle">${esc(titleFor(r,headers)||r._sheet)}</div><div class="searchMeta">${esc(r._sheet)}</div><div>${headers.slice(0,12).map(h=>{let v=r[h]; return String(v??"").trim()?`<b>${esc(h)}:</b> ${esc(v)}<br>`:""}).join("")}</div></div>`).join("") + (rows.length>limit?`<div class="muted">上位${limit}件を表示（該当 ${rows.length}件）</div>`:"");
+}
+function searchSheet(sheet,inputId,outId){
+ const q=document.getElementById(inputId).value.trim().toLowerCase();
+ const data=allRows(sheet).map(r=>({...r,_sheet:sheet}));
+ const rows=q?data.filter(r=>rowText(r).toLowerCase().includes(q)):data;
+ document.getElementById(outId).innerHTML=`<h3>${esc(sheet)}</h3>${renderRows(rows)}`;
+}
+function globalSearch(){
+ const q=document.getElementById("globalSearch").value.trim().toLowerCase();
+ if(!q){document.getElementById("globalOut").innerHTML='<div class="empty">検索語を入力してください。</div>';return}
+ let hits=[];
+ for(const [sheet,obj] of Object.entries(DB.sheets)){
+   for(const r of (obj.rows||[])){if(rowText(r).toLowerCase().includes(q))hits.push({...r,_sheet:sheet})}
+ }
+ document.getElementById("globalOut").innerHTML=`<h3>検索結果：${hits.length}件</h3>${renderRows(hits,60)}`;
+}
+function chordRows(){
+ const candidates=["DB_コード","DB_コードスケール","DB_分数コード"];
+ let all=[]; candidates.forEach(s=>all.push(...allRows(s).map(r=>({...r,_sheet:s}))));
+ return all;
+}
+function renderChord(){
+ const c=document.getElementById("chordSelect").value,k=document.getElementById("chordKey").value;
+ const hits=chordRows().filter(r=>rowText(r).toLowerCase().includes(c.toLowerCase()));
+ let html=`<div class="chord">${esc(c)}</div><div class="pill">Key: ${esc(k)}</div>`;
+ if(hits.length) html+=`<h3>Excel実データ</h3>${renderRows(hits,30)}`;
+ else html+=`<p>該当するコード情報が見つかりませんでした。</p>`;
+ document.getElementById("chordOut").innerHTML=html;
+}
+function showChord(){openTab("chord");document.getElementById("chordKey").value=document.getElementById("homeKey").value;document.getElementById("chordSelect").value=document.getElementById("homeChord").value;renderChord()}
+function analyzeProgress(){
+ const input=document.getElementById("progressInput").value.trim();
+ if(!input){document.getElementById("progressOut").innerHTML='<div class="empty">コード進行を入力してください。</div>';return}
+ const arr=input.split(/[\s,、→→-]+/).filter(Boolean);
+ let html=`<h3>入力された進行</h3>${arr.map(x=>`<span class="pill">${esc(x)}</span>`).join("")}`;
+ const key=document.getElementById("chordKey").value||"C";
+ const root=pc[key]??0;
+ html+=`<h3>簡易機能分析</h3>`;
+ const roman={0:"I",1:"♭II",2:"II",3:"♭III",4:"III",5:"IV",6:"♭V",7:"V",8:"♭VI",9:"VI",10:"♭VII",11:"VII"};
+ html+=arr.map(c=>{let m=c.match(/^[A-G](?:#|b)?/);if(!m)return `<span class="pill">${esc(c)}</span>`;let n=pc[m[0]];let d=(n-root+12)%12;return `<span class="pill">${esc(c)} → ${roman[d]||d}</span>`}).join("");
+ const q=arr.join(" ").toLowerCase();
+ let hits=allRows("DB_進行").map(r=>({...r,_sheet:"DB_進行"})).filter(r=>rowText(r).toLowerCase().includes(q));
+ if(!hits.length && arr.length>=2){hits=allRows("DB_進行").map(r=>({...r,_sheet:"DB_進行"})).filter(r=>arr.some(c=>rowText(r).toLowerCase().includes(c.toLowerCase()))).slice(0,20)}
+ if(hits.length) html+=`<h3>進行DBとの一致・関連</h3>${renderRows(hits,20)}`;
+ document.getElementById("progressOut").innerHTML=html;
+}
+function renderScale(){
+ const r=document.getElementById("scaleRoot").value,m=document.getElementById("scaleMode").value,ints=modes[m],root=pc[r];
+ const notes=ints.map(i=>names[(root+i)%12]);
+ let html=`<div class="chord">${esc(r)} ${esc(m)}</div><h3>構成音</h3>${notes.map(n=>`<span class="pill">${n}</span>`).join("")}`;
+ const q=allRows("DB_コードスケール").map(x=>({...x,_sheet:"DB_コードスケール"})).filter(x=>rowText(x).toLowerCase().includes(r.toLowerCase()));
+ if(q.length)html+=`<h3>コード×スケールDB</h3>${renderRows(q,20)}`;
+ document.getElementById("scaleOut").innerHTML=html;
+}
+function renderModulation(){
+ const a=document.getElementById("fromKey").value,b=document.getElementById("toKey").value;
+ const rows=allRows("DB_転調").map(r=>({...r,_sheet:"DB_転調"}));
+ const hits=rows.filter(r=>rowText(r).toLowerCase().includes(a.toLowerCase())&&rowText(r).toLowerCase().includes(b.toLowerCase()));
+ const interval=(pc[b]-pc[a]+12)%12;
+ let html=`<div class="chord">${esc(a)} → ${esc(b)}</div><p>半音距離：${interval}</p>`;
+ html+=hits.length?`<h3>転調DBの実データ</h3>${renderRows(hits,30)}`:`<div class="empty">この組み合わせを直接含む転調DBデータはありません。全転調DBから候補を探す場合は全データ検索を利用してください。</div>`;
+ document.getElementById("modOut").innerHTML=html;
+}
+async function init(){
+ DB=await fetch("data.json").then(r=>r.json());
+ Object.entries(DB.sheets).forEach(([k,v])=>sheetMap[k]=v);
+ const chordSet=new Set(["C","Cm","C7","Cmaj7","Cm7","C6","Cadd9","Csus4","C/E","C/G"]);
+ for(const r of allRows("DB_コード")) Object.values(r).forEach(v=>{let s=String(v??"").trim();if(/^[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add|7|6|9|11|13|\/)?/.test(s)&&s.length<15)chordSet.add(s)});
+ fill("homeKey",keys);fill("chordKey",keys);fill("scaleRoot",keys);fill("fromKey",keys);fill("toKey",keys);fill("homeChord",[...chordSet]);fill("chordSelect",[...chordSet]);
+ document.getElementById("stats").textContent=`${DB.sheet_names.length}シート / ${Object.values(DB.sheets).reduce((n,s)=>n+(s.rows?.length||0),0).toLocaleString()}行`;
+ renderChord();renderScale();
+}
+init();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
+</script></body>
+</html>
