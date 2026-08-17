@@ -179,7 +179,17 @@ function parseFormList(row){
   add(row?.["押さえ方"]);
   return out;
 }
-function chordSvg(code,notation){
+function noteTokens(value){
+  return uniq(String(value||"").match(/[A-G](?:#|b)?/g)||[]).filter(n=>NOTE_PC[n]!==undefined);
+}
+function tensionNotes(row){
+  // Only parenthesized note names from the DB's "使えるテンション" field are accepted.
+  // If the DB does not name a pitch, nothing is inferred or added.
+  const value=String(row?.["使えるテンション"]||""),out=[];
+  for(const m of value.matchAll(/\(([A-G](?:#|b)?)\)/g))if(NOTE_PC[m[1]]!==undefined&&!out.includes(m[1]))out.push(m[1]);
+  return out;
+}
+function chordSvg(code,notation,row=null,showToneMap=false){
   const raw=parseFingering(notation);
   if(raw.length!==6)return `<div class="muted">押さえ方データ未登録</div>`;
   const display=[raw[5],raw[4],raw[3],raw[2],raw[1],raw[0]]; // top 1st → bottom 6th
@@ -191,13 +201,24 @@ function chordSvg(code,notation){
   for(let j=0;j<fretCount;j++){const fret=start+j,x=left+colW*(j+.5);svg+=`<text x="${x}" y="54" text-anchor="middle" font-size="14" font-weight="800">${fret}</text>`}
   for(let i=0;i<6;i++){const y=top+rowH*i;svg+=`<text x="34" y="${y+5}" text-anchor="middle" font-size="14" font-weight="800">${i+1}弦</text><line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#222" stroke-width="2"/>`}
   for(let j=0;j<=fretCount;j++){const x=left+colW*j;svg+=`<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="#222" stroke-width="${j===0&&start===1?5:2}"/>`}
+  const chordPcs=new Set(noteTokens(row?.["構成音"]).map(n=>NOTE_PC[n]));
+  const tensions=tensionNotes(row),tensionByPc=new Map(tensions.map(n=>[NOTE_PC[n],n]));
+  if(showToneMap&&row){
+    for(let i=0;i<6;i++)for(let j=0;j<fretCount;j++){
+      const fret=start+j,pc=(TUNING_PC[5-i]+fret)%12,x=left+colW*(j+.5),y=top+rowH*i;
+      if(tensionByPc.has(pc))svg+=`<circle cx="${x}" cy="${y}" r="8" fill="#f59e0b" opacity=".9"/><text x="${x}" y="${y+3.5}" text-anchor="middle" font-size="8" font-weight="800" fill="white">T</text>`;
+      else if(chordPcs.has(pc))svg+=`<circle cx="${x}" cy="${y}" r="6" fill="#93c5fd" opacity=".8"/>`;
+    }
+  }
   for(let i=0;i<6;i++){
     const val=display[i],y=top+rowH*i;
     if(val===0)svg+=`<text x="61" y="${y+5}" text-anchor="middle" font-size="17" font-weight="800">○</text>`;
     else if(val<0)svg+=`<text x="61" y="${y+5}" text-anchor="middle" font-size="17" font-weight="800">×</text>`;
-    else{const rel=val-start;if(rel>=0&&rel<fretCount){const x=left+colW*(rel+.5);svg+=`<circle cx="${x}" cy="${y}" r="10" fill="#111"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="10" font-weight="800" fill="white">${val}</text>`}}
+    else{const rel=val-start;if(rel>=0&&rel<fretCount){const x=left+colW*(rel+.5);svg+=`<circle cx="${x}" cy="${y}" r="11" fill="#1d4ed8" stroke="white" stroke-width="2"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="10" font-weight="800" fill="white">${val}</text>`}}
   }
-  svg+=`<text x="180" y="255" text-anchor="middle" font-size="11" fill="#667085">上：1弦 / 下：6弦　数字：実フレット番号</text></svg>`;
+  svg+=`<text x="180" y="248" text-anchor="middle" font-size="11" fill="#667085">上：1弦 / 下：6弦　数字：実フレット番号</text>`;
+  if(showToneMap&&row)svg+=`<circle cx="90" cy="264" r="6" fill="#93c5fd"/><text x="101" y="268" font-size="10" fill="#475467">コードトーン</text><circle cx="205" cy="264" r="7" fill="#f59e0b"/><text x="216" y="268" font-size="10" fill="#475467">DBテンション${tensions.length?` (${esc(tensions.join("/"))})`:" (登録なし)"}</text>`;
+  svg+=`</svg>`;
   return svg;
 }
 function barreEstimate(form){
@@ -280,6 +301,39 @@ function chordCandidates(code){
   movableSameChordForms(code).forEach(x=>add(x.form,x.label));
   return out.sort((a,b)=>a.position-b.position);
 }
+function formRegion(form){
+  const p=parseFingering(form).filter(x=>x>0),min=p.length?Math.min(...p):0;
+  return min<=4?"low":min<=9?"middle":"high";
+}
+function generatedRegionForm(row,region,variant=0){
+  const pcs=uniq(noteTokens(row?.["構成音"]).map(n=>NOTE_PC[n]));if(!pcs.length)return null;
+  const ranges={low:[1,4],middle:[5,9],high:[10,14]},[lo,hi]=ranges[region],center=variant===1?lo:variant===2?hi:(lo+hi)/2;
+  const choices=TUNING_PC.map(open=>{const a=[];for(let f=lo;f<=hi;f++)if(pcs.includes((open+f)%12))a.push(f);return a.sort((x,y)=>Math.abs(x-center)-Math.abs(y-center))});
+  const form=Array(6).fill(-1),used=new Set();
+  for(const pc of pcs){
+    let best=null;
+    for(let s=0;s<6;s++)for(const f of choices[s])if(form[s]<0&&(TUNING_PC[s]+f)%12===pc){const score=Math.abs(f-center)+(used.has(s)?20:0);if(!best||score<best.score)best={s,f,score}}
+    if(best){form[best.s]=best.f;used.add(best.s)}
+    if(used.size>=4)break;
+  }
+  for(let s=0;s<6&&used.size<4;s++)if(form[s]<0&&choices[s][0]!==undefined){form[s]=choices[s][0];used.add(s)}
+  return used.size>=3?form:null;
+}
+function dictionaryForms(code){
+  const row=codes.find(r=>r["コード"]===code),all=chordCandidates(code),seen=new Set();
+  const registered=parseFingering(row?.["押さえ方"]),registeredKey=registered.join(",");
+  const registeredCandidate=all.find(x=>parseFingering(x.form).join(",")===registeredKey);
+  const basic=(registered.includes(0)?registeredCandidate:null)||all.find(x=>parseFingering(x.form).includes(0))||registeredCandidate||all[0]||null;
+  if(basic)seen.add(parseFingering(basic.form).join(","));
+  const groups={low:null,middle:null,high:null};
+  for(const x of all){const key=parseFingering(x.form).join(","),r=formRegion(x.form);if(!seen.has(key)&&!groups[r]){groups[r]=x;seen.add(key)}}
+  for(const r of Object.keys(groups))if(!groups[r]){
+    let form=null,key="";
+    for(let variant=0;variant<3;variant++){const candidate=generatedRegionForm(row,r,variant),candidateKey=candidate?.join(",");if(candidate&&!seen.has(candidateKey)){form=candidate;key=candidateKey;break}}
+    if(form){groups[r]={form,label:`${r==="low"?"ロー":r==="middle"?"ミドル":"ハイ"}ポジション・DB構成音ボイシング`,difficulty:formDifficulty(form),position:formPosition(form)};seen.add(key)}
+  }
+  return{row,basic,groups};
+}
 
 // ---------- Chord priority ----------
 function parseChordName(name){
@@ -300,16 +354,16 @@ function priorityHtml(row,forBass=false){
 }
 function showChordDiagram(id,code){
   const box=byId(id),row=codes.find(r=>r["コード"]===code);if(!box||!row)return;
-  const candidates=chordCandidates(code),c=candidates[0];
-  box.innerHTML=c?`<div class="chordDiagram"><h3>🎸 ${esc(code)} の押さえ方</h3>${chordSvg(code,c.form)}<div class="muted" style="text-align:center">6弦→1弦：${esc(fingeringText(c.form))} <span class="difficulty">難易度：${esc(c.difficulty.label)}</span></div></div>`:`<div class="muted">押さえ方データがありません。</div>`;
+  const c=dictionaryForms(code).basic;
+  box.innerHTML=c?`<div class="chordDiagram"><h3>🎸 ${esc(code)} の基本フォーム</h3><div class="muted">開放弦を含むオープンコードを優先表示します。</div>${chordSvg(code,c.form,row,true)}<div class="muted" style="text-align:center">6弦→1弦：${esc(fingeringText(c.form))} <span class="difficulty">難易度：${esc(c.difficulty.label)}</span></div></div>`:`<div class="muted">押さえ方データがありません。</div>`;
 }
 function showSameChordVoicings(id,code){
   const box=byId(id);if(!box)return;
-  const list=chordCandidates(code);
+  const data=dictionaryForms(code),list=Object.entries(data.groups).filter(([,x])=>x).map(([region,x])=>({...x,region}));
   if(!list.length){box.innerHTML=`<div class="muted">別ポジション候補がありません。</div>`;return}
-  const cards=list.map((x,i)=>{
-    const pos=x.position<4?"ロー":x.position<9?"ミドル":"ハイ";
-    return `<div class="voicingCard"><div class="voicingHead"><b>${esc(code)}｜${esc(pos)}ポジション</b><span class="difficulty">難易度：${esc(x.difficulty.label)}</span></div><div class="muted">${esc(x.label)}</div>${chordSvg(code,x.form)}<div class="muted" style="text-align:center">6弦→1弦：${esc(fingeringText(x.form))}</div></div>`;
+  const cards=list.map(x=>{
+    const pos={low:"ロー",middle:"ミドル",high:"ハイ"}[x.region];
+    return `<div class="voicingCard"><div class="voicingHead"><b>${esc(code)}｜${esc(pos)}ポジション</b><span class="difficulty">難易度：${esc(x.difficulty.label)}</span></div><div class="muted">${esc(x.label)}</div>${chordSvg(code,x.form,data.row,true)}<div class="muted" style="text-align:center">6弦→1弦：${esc(fingeringText(x.form))}</div></div>`;
   }).join("");
   box.innerHTML=`<div class="voicingIntro"><b>🎸 同じコードの別ポジション</b><div class="muted">コード進行の候補ではありません。構成音は同じまま、オープン／ロー／ミドル／ハイなど別の位置・転回形で弾く候補です。</div></div><div class="voicingGrid">${cards}</div>`;
 }
