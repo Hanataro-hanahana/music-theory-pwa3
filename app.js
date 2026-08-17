@@ -222,9 +222,63 @@ function formDistance(a,b){
   }
   return d/(n||1)+Math.abs(formPosition(aa)-formPosition(bb))*.2-common*.25;
 }
+function movableSameChordForms(code){
+  const c=parseChordName(code);
+  if(!c||c.bass||NOTE_PC[c.root]===undefined)return[];
+  const q=String(c.quality||"").toLowerCase();
+  const pc=NOTE_PC[c.root];
+  const eRoot=(pc-4+12)%12; // 6弦Eフォームのルート位置
+  const aRoot=(pc-9+12)%12; // 5弦Aフォームのルート位置
+
+  const templates={
+    major:{E:[0,2,2,1,0,0],A:[-1,0,2,2,2,0]},
+    minor:{E:[0,2,2,0,0,0],A:[-1,0,2,2,1,0]},
+    seven:{E:[0,2,0,1,0,0],A:[-1,0,2,0,2,0]},
+    maj7:{E:[0,2,1,1,0,0],A:[-1,0,2,1,2,0]},
+    min7:{E:[0,2,0,0,0,0],A:[-1,0,2,0,1,0]},
+    sus2:{E:[0,2,4,4,0,0],A:[-1,0,2,2,0,0]},
+    sus4:{E:[0,2,2,2,0,0],A:[-1,0,2,2,3,0]}
+  };
+  let type=null;
+  if(q===""||q==="maj"||q==="major")type="major";
+  else if(q==="m"||q==="min"||q==="minor")type="minor";
+  else if(q==="7")type="seven";
+  else if(q==="maj7"||q==="major7")type="maj7";
+  else if(q==="m7"||q==="min7")type="min7";
+  else if(q==="sus2")type="sus2";
+  else if(q==="sus4")type="sus4";
+  if(!type)return[];
+
+  const make=(tpl,base,label)=>{
+    const f=tpl.map(x=>x<0?-1:x+base);
+    if(f.some(x=>x>20))return null;
+    return {form:f,label};
+  };
+  const forms=[];
+  const e1=make(templates[type].E,eRoot,`6弦ルート・Eフォーム（${eRoot}F付近）`);
+  const a1=make(templates[type].A,aRoot,`5弦ルート・Aフォーム（${aRoot}F付近）`);
+  if(e1)forms.push(e1);
+  if(a1)forms.push(a1);
+
+  // 同じフォームを12F上にも作り、ハイポジション候補にする
+  const eHigh=make(templates[type].E,eRoot+12,`ハイポジション・Eフォーム（${eRoot+12}F付近）`);
+  const aHigh=make(templates[type].A,aRoot+12,`ハイポジション・Aフォーム（${aRoot+12}F付近）`);
+  if(eHigh)forms.push(eHigh);
+  if(aHigh)forms.push(aHigh);
+  return forms;
+}
 function chordCandidates(code){
   const row=codes.find(r=>r["コード"]===code);
-  return parseFormList(row).map((form,i)=>({form,label:i===0?"基本フォーム":`候補${i+1}`,difficulty:formDifficulty(form)}));
+  const seen=new Set(),out=[];
+  const add=(form,label)=>{
+    const p=parseFingering(form);if(p.length!==6)return;
+    const k=p.join(",");if(seen.has(k))return;
+    seen.add(k);
+    out.push({form:p,label,difficulty:formDifficulty(p),position:formPosition(p)});
+  };
+  parseFormList(row).forEach((form,i)=>add(form,i===0?"基本フォーム":`同コード別フォーム ${i+1}`));
+  movableSameChordForms(code).forEach(x=>add(x.form,x.label));
+  return out.sort((a,b)=>a.position-b.position);
 }
 
 // ---------- Chord priority ----------
@@ -249,11 +303,28 @@ function showChordDiagram(id,code){
   const candidates=chordCandidates(code),c=candidates[0];
   box.innerHTML=c?`<div class="chordDiagram"><h3>🎸 ${esc(code)} の押さえ方</h3>${chordSvg(code,c.form)}<div class="muted" style="text-align:center">6弦→1弦：${esc(fingeringText(c.form))} <span class="difficulty">難易度：${esc(c.difficulty.label)}</span></div></div>`:`<div class="muted">押さえ方データがありません。</div>`;
 }
+function showSameChordVoicings(id,code){
+  const box=byId(id);if(!box)return;
+  const list=chordCandidates(code);
+  if(!list.length){box.innerHTML=`<div class="muted">別ポジション候補がありません。</div>`;return}
+  const cards=list.map((x,i)=>{
+    const pos=x.position<4?"ロー":x.position<9?"ミドル":"ハイ";
+    return `<div class="voicingCard"><div class="voicingHead"><b>${esc(code)}｜${esc(pos)}ポジション</b><span class="difficulty">難易度：${esc(x.difficulty.label)}</span></div><div class="muted">${esc(x.label)}</div>${chordSvg(code,x.form)}<div class="muted" style="text-align:center">6弦→1弦：${esc(fingeringText(x.form))}</div></div>`;
+  }).join("");
+  box.innerHTML=`<div class="voicingIntro"><b>🎸 同じコードの別ポジション</b><div class="muted">コード進行の候補ではありません。構成音は同じまま、オープン／ロー／ミドル／ハイなど別の位置・転回形で弾く候補です。</div></div><div class="voicingGrid">${cards}</div>`;
+}
 byId("cbtn")?.addEventListener("click",()=>{
   const code=byId("codes")?.value,row=codes.find(r=>r["コード"]===code);
-  render("cout",row?[row]:[]);
-  if(byId("chordPriority"))byId("chordPriority").innerHTML=priorityHtml(row,false);
+  if(row){
+    const clean={};
+    for(const [k,v] of Object.entries(row)){
+      if(["フォーム候補","最優先音","次に追加する音","置換/関連"].includes(k))continue;
+      clean[k]=v;
+    }
+    render("cout",[clean]);
+  }else render("cout",[]);
   showChordDiagram("chordGuitar",code);
+  showSameChordVoicings("chordVoicings",code);
 });
 
 // ---------- Guitar dictionary ----------
