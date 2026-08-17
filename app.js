@@ -27,40 +27,70 @@ function fingeringText(value){
   return f.length===6?f.map(x=>x<0?"×":String(x)).join(" / "):String(value??"");
 }
 function chordSvg(code,notation){
-  const f=parseFingering(notation);
-  if(f.length!==6)return `<div class="muted">押さえ方データ：${esc(fingeringText(notation)||"未登録")}</div>`;
-  const positives=f.filter(x=>x>0);
+  // Internal data order: [6th,5th,4th,3rd,2nd,1st]
+  // Display order: top=1st string ... bottom=6th string.
+  const raw=parseFingering(notation);
+  if(raw.length!==6)return `<div class="muted">押さえ方データ：${esc(fingeringText(notation)||"未登録")}</div>`;
+
+  const display=[raw[5],raw[4],raw[3],raw[2],raw[1],raw[0]];
+  const positives=raw.filter(x=>x>0);
   const min=positives.length?Math.min(...positives):1;
   const max=positives.length?Math.max(...positives):1;
+
+  // Show five consecutive fret columns. Open/mute are shown in a dedicated left area.
   let start=min>4?Math.max(1,min-1):1;
-  if(max-start>4) start=Math.max(1,max-4);
-  const frets=5,W=320,H=245,left=48,right=275,top=58,bottom=208;
+  if(max-start>4)start=Math.max(1,max-4);
+  const fretCount=5;
+
+  const W=360,H=270;
+  const left=78,right=330,top=68,bottom=225;
+  const rowH=(bottom-top)/5;
+  const colW=(right-left)/fretCount;
+
   let svg=`<svg class="chordSvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(code)}のギターコードダイアグラム">`;
-  svg+=`<text x="160" y="24" text-anchor="middle" font-size="20" font-weight="800">${esc(code)}</text>`;
-  if(start>1)svg+=`<text x="24" y="69" font-size="13" font-weight="700">${start}F〜</text>`;
-  // String lines and exact fret number above each string.
-  for(let i=0;i<6;i++){
-    const x=left+(right-left)*i/5;
-    svg+=`<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="#222" stroke-width="2"/>`;
-    const val=f[i],label=val<0?"×":val===0?"○":String(val);
-    svg+=`<text x="${x}" y="48" text-anchor="middle" font-size="16" font-weight="800">${label}</text>`;
+  svg+=`<text x="180" y="27" text-anchor="middle" font-size="21" font-weight="800">${esc(code)}</text>`;
+
+  // Fret numbers across the top.
+  for(let j=0;j<fretCount;j++){
+    const fret=start+j;
+    const x=left+colW*(j+.5);
+    svg+=`<text x="${x}" y="54" text-anchor="middle" font-size="14" font-weight="800">${fret}</text>`;
   }
-  for(let j=0;j<=frets;j++){
-    const y=top+(bottom-top)*j/frets;
-    svg+=`<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#222" stroke-width="${j===0&&start===1?5:2}"/>`;
-  }
+
+  // String labels on the left: top 1st string, bottom 6th string.
   for(let i=0;i<6;i++){
-    const val=f[i];
-    if(val>0){
-      const rel=val-start+1;
-      if(rel>=1&&rel<=frets){
-        const x=left+(right-left)*i/5;
-        const y=top+(bottom-top)*(rel-.5)/frets;
+    const y=top+rowH*i;
+    const stringNo=i+1;
+    svg+=`<text x="34" y="${y+5}" text-anchor="middle" font-size="14" font-weight="800">${stringNo}弦</text>`;
+    svg+=`<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#222" stroke-width="2"/>`;
+  }
+
+  // Vertical fret lines.
+  for(let j=0;j<=fretCount;j++){
+    const x=left+colW*j;
+    svg+=`<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="#222" stroke-width="${j===0&&start===1?5:2}"/>`;
+  }
+
+  // Dots / open / mute.
+  for(let i=0;i<6;i++){
+    const val=display[i];
+    const y=top+rowH*i;
+    if(val===0){
+      svg+=`<text x="61" y="${y+5}" text-anchor="middle" font-size="17" font-weight="800">○</text>`;
+    }else if(val<0){
+      svg+=`<text x="61" y="${y+5}" text-anchor="middle" font-size="17" font-weight="800">×</text>`;
+    }else{
+      const rel=val-start;
+      if(rel>=0&&rel<fretCount){
+        const x=left+colW*(rel+.5);
         svg+=`<circle cx="${x}" cy="${y}" r="10" fill="#111"/>`;
+        svg+=`<text x="${x}" y="${y+4}" text-anchor="middle" font-size="10" font-weight="800" fill="white">${val}</text>`;
       }
     }
   }
-  svg+=`<text x="160" y="232" text-anchor="middle" font-size="11" fill="#667085">6弦 → 1弦：${esc(fingeringText(f))}</text></svg>`;
+
+  svg+=`<text x="180" y="255" text-anchor="middle" font-size="11" fill="#667085">上：1弦　／　下：6弦　｜　数字：実フレット番号</text>`;
+  svg+=`</svg>`;
   return svg;
 }
 function showChordDiagram(id,code){
