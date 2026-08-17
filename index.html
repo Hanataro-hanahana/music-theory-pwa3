@@ -187,7 +187,7 @@ function renderModulation(){
  document.getElementById("modOut").innerHTML=html;
 }
 async function init(){
- try { DB=EMBEDDED_DB;
+ try { DB=await fetch('./data.json?v=7', {cache:'no-store'}).then(r=>{if(!r.ok) throw new Error('data.json HTTP '+r.status); return r.json();});
  Object.entries(DB.sheets).forEach(([k,v])=>sheetMap[k]=v);
  const chordSet=new Set(["C","Cm","C7","Cmaj7","Cm7","C6","Cadd9","Csus4","C/E","C/G"]);
  for(const r of allRows("DB_コード")) Object.values(r).forEach(v=>{let s=String(v??"").trim();if(/^[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add|7|6|9|11|13|\/)?/.test(s)&&s.length<15)chordSet.add(s)});
