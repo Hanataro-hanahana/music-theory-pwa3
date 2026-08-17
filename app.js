@@ -1,59 +1,15 @@
-(() => {
-"use strict";
-const DB = window.MUSIC_DB || {};
-const keys=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
-const rows=n=>(DB[n]&&DB[n].rows)||[];
-const esc=x=>String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-const setOptions=(id,vals)=>{const e=document.getElementById(id); if(!e)return; e.innerHTML=[...new Set(vals.filter(Boolean))].map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("")};
-const card=r=>Object.entries(r).filter(([k,v])=>String(v??"").trim()!=="").map(([k,v])=>`<div class="item"><b>${esc(k)}</b><br>${esc(v).replace(/\n/g,"<br>")}</div>`).join("");
-const showHits=(id,hits,empty="該当データなし")=>{document.getElementById(id).innerHTML=hits.length?hits.slice(0,30).map(card).join(""):`<div class="muted">${empty}</div>`};
-
-function init(){
- const allRows=Object.values(DB).reduce((n,s)=>n+(s.rows?s.rows.length:0),0);
- document.getElementById("total").textContent=allRows.toLocaleString()+"件";
- document.getElementById("dbStats").innerHTML=Object.entries(DB).map(([n,s])=>`<div class="sheet"><span>${esc(n)}</span><span class="count">${s.rows.length}件</span></div>`).join("");
-
- const codes=rows("DB_コード");
- const codeNames=codes.map(r=>r["コード"]);
- ["chords","chords2","chords3"].forEach(id=>setOptions(id,codeNames));
-
- const progs=rows("DB_進行");
- setOptions("progType",progs.map(r=>r["進行タイプ"]));
- setOptions("composeType",rows("DB_作曲").map(r=>r["方向"]));
- setOptions("melodyType",rows("DB_メロディ").map(r=>r["進行タイプ"]));
- setOptions("arrangeType",rows("DB_アレンジ").map(r=>r["方向/進行"]));
- setOptions("scaleKey",keys);setOptions("fromKey",keys);setOptions("toKey",keys);
-
- const findCode=q=>codes.filter(r=>r["コード"]===q);
- const findCS=q=>rows("DB_コードスケール").filter(r=>r["コード"]===q);
- document.getElementById("chordBtn").onclick=()=>showHits("chordOut",findCode(document.getElementById("chordQ").value.trim()));
- document.getElementById("chordBtn2").onclick=()=>showHits("chordOut2",findCode(document.getElementById("chordQ2").value.trim()));
- document.getElementById("csBtn").onclick=()=>showHits("csOut",findCS(document.getElementById("csQ").value.trim()));
-
- document.getElementById("progBtn").onclick=()=>{const q=document.getElementById("progType").value;showHits("progOut",progs.filter(r=>r["進行タイプ"]===q));};
- document.getElementById("progTextBtn").onclick=()=>{const q=document.getElementById("progQ").value.toLowerCase().replace(/\s/g,"");showHits("progTextOut",progs.filter(r=>String(r["実コード"]||"").toLowerCase().replace(/\s/g,"").includes(q)));};
-
- document.getElementById("scaleBtn").onclick=()=>{const k=document.getElementById("scaleKey").value, kind=document.getElementById("scaleKind").value;showHits("scaleOut",rows("DB_解決音").filter(r=>r["キー"]===k&&r["キー種別"]===kind));};
- document.getElementById("composeBtn").onclick=()=>{const q=document.getElementById("composeType").value;showHits("composeOut",rows("DB_作曲").filter(r=>r["方向"]===q));};
- document.getElementById("melodyBtn").onclick=()=>{const q=document.getElementById("melodyType").value;showHits("melodyOut",rows("DB_メロディ").filter(r=>r["進行タイプ"]===q));};
- document.getElementById("arrangeBtn").onclick=()=>{const q=document.getElementById("arrangeType").value;showHits("arrangeOut",rows("DB_アレンジ").filter(r=>r["方向/進行"]===q));};
- document.getElementById("modBtn").onclick=()=>{const a=document.getElementById("fromKey").value,b=document.getElementById("toKey").value;showHits("modOut",rows("DB_転調").filter(r=>r["現在キー"]===a));};
-
- document.getElementById("globalBtn").onclick=()=>{
-   const q=document.getElementById("globalQ").value.trim().toLowerCase();
-   if(!q){document.getElementById("globalOut").innerHTML='<div class="muted">検索語を入力してください。</div>';return}
-   const out=[];
-   for(const [sheet,s] of Object.entries(DB)){
-     for(const r of s.rows){
-       if(Object.values(r).some(v=>String(v??"").toLowerCase().includes(q))) out.push({...r,__sheet:sheet});
-       if(out.length>=80)break;
-     }
-     if(out.length>=80)break;
-   }
-   document.getElementById("globalOut").innerHTML=out.length?out.map(r=>`<div class="item"><span class="pill">${esc(r.__sheet)}</span>${card(Object.fromEntries(Object.entries(r).filter(([k])=>k!=="__sheet")))}</div>`).join(""):'<div class="muted">該当データなし</div>';
- };
-
- document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));document.getElementById(b.dataset.page).classList.add("active");window.scrollTo(0,0)});
-}
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
-})();
+(()=>{"use strict";const D=window.MUSIC_DB||{};const rows=n=>(D[n]?.rows)||[];const uniq=a=>[...new Set(a.filter(x=>x!==undefined&&String(x).trim()!==""))];const esc=x=>String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));function opts(id,a){document.getElementById(id).innerHTML=uniq(a).map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("")}function render(id,rs,msg="該当データがありません"){document.getElementById(id).innerHTML=rs.length?rs.slice(0,30).map(r=>`<div class="resultbox">${Object.entries(r).filter(([k,v])=>String(v??"").trim()).map(([k,v])=>`<div class="item"><b>${esc(k)}</b><div class="value">${esc(v).replace(/\n/g,"<br>")}</div></div>`).join("")}</div>`).join(""):`<div class="muted">${msg}</div>`}function page(p){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));document.getElementById(p).classList.add("active");document.querySelectorAll(".bottom button").forEach(x=>x.classList.toggle("active",x.dataset.page===p));scrollTo(0,0)}document.querySelectorAll("[data-page]").forEach(x=>x.onclick=()=>page(x.dataset.page));
+const keys=["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"],codes=rows("DB_コード"),progs=rows("DB_進行");
+document.getElementById("total").textContent=Object.values(D).reduce((n,s)=>n+s.rows.length,0).toLocaleString()+"件";
+document.getElementById("dbSummary").innerHTML=Object.entries(D).map(([n,s])=>`<div class="item"><b>${esc(n)}</b><div class="muted">${s.rows.length.toLocaleString()}件</div></div>`).join("");
+opts("codes",codes.map(r=>r["コード"]));opts("pt",progs.map(r=>r["進行タイプ"]));opts("sk",keys);opts("mk1",keys);opts("mk2",keys);opts("co",rows("DB_作曲").map(r=>r["方向"]));opts("me",rows("DB_メロディ").map(r=>r["進行タイプ"]));opts("ar",rows("DB_アレンジ").map(r=>r["方向/進行"]));
+document.getElementById("cbtn").onclick=()=>{let q=document.getElementById("cq").value.trim();render("cout",codes.filter(r=>String(r["コード"])===q))};
+document.getElementById("pbtn").onclick=()=>{let q=document.getElementById("pt").value;render("pout",progs.filter(r=>r["進行タイプ"]===q))};
+document.getElementById("p2btn").onclick=()=>{let q=document.getElementById("pq").value.toLowerCase().replace(/\s/g,"");render("p2out",progs.filter(r=>String(r["実コード"]||"").toLowerCase().replace(/\s/g,"").includes(q)))};
+document.getElementById("sbtn").onclick=()=>{let k=document.getElementById("sk").value,kind=document.getElementById("sm").value;render("sout",rows("DB_解決音").filter(r=>r["キー"]===k&&r["キー種別"]===kind))};
+document.getElementById("mbtn").onclick=()=>{let a=document.getElementById("mk1").value,b=document.getElementById("mk2").value;let rs=rows("DB_転調").filter(r=>String(Object.values(r).join(" ")).includes(a)&&String(Object.values(r).join(" ")).includes(b));render("mout",rs,"該当する転調データがありません。")};
+document.getElementById("cobtn").onclick=()=>{let q=document.getElementById("co").value;render("coout",rows("DB_作曲").filter(r=>r["方向"]===q))};
+document.getElementById("mebtn").onclick=()=>{let q=document.getElementById("me").value;render("meout",rows("DB_メロディ").filter(r=>r["進行タイプ"]===q))};
+document.getElementById("arbtn").onclick=()=>{let q=document.getElementById("ar").value;render("arout",rows("DB_アレンジ").filter(r=>r["方向/進行"]===q))};
+function global(q,id){q=q.trim().toLowerCase();let rs=[];if(q)for(const [s,v] of Object.entries(D)){for(const r of v.rows)if(Object.values(r).some(x=>String(x??"").toLowerCase().includes(q))){rs.push(Object.assign({"データベース":s},r));if(rs.length>=40)break}if(rs.length>=40)break}render(id,rs,"検索語を入力してください。")}document.getElementById("gbtn").onclick=()=>global(document.getElementById("gq").value,"gout");document.getElementById("quickBtn").onclick=()=>{document.getElementById("gq").value=document.getElementById("quick").value;page("search");global(document.getElementById("quick").value,"gout")};
+})()
