@@ -582,7 +582,7 @@ function renderHana(){
   }).join("")}</div>`;
   out.scrollIntoView({behavior:"smooth",block:"start"});
 }
-let hanaScrollFrame=0,hanaScrolling=false,hanaLastTime=0;
+let hanaScrollFrame=0,hanaScrolling=false,hanaLastTime=0,hanaScrollY=0;
 function stopHanaScroll(){
   hanaScrolling=false;if(hanaScrollFrame)cancelAnimationFrame(hanaScrollFrame);hanaScrollFrame=0;hanaLastTime=0;
   const b=byId("hanaScroll");if(b)b.textContent="▶ 自動スクロール";
@@ -591,15 +591,18 @@ function stopHanaScroll(){
 function hanaScrollStep(time){
   if(!hanaScrolling||!byId("hana")?.classList.contains("active")){stopHanaScroll();return}
   if(!hanaLastTime)hanaLastTime=time;
-  const speed=Number(byId("hanaSpeed")?.value||32),dy=speed*Math.min(50,time-hanaLastTime)/1000;hanaLastTime=time;
-  window.scrollBy(0,dy);
+  const bpm=Number(byId("hanaBpm")?.value||100),rows=[...(byId("hanaOut")?.querySelectorAll(".progressRow")||[])];
+  const rowDistance=rows.length>1?rows[1].offsetTop-rows[0].offsetTop:(rows[0]?.offsetHeight||320)+14;
+  const pixelsPerSecond=(rowDistance/16)*(bpm/60),elapsed=Math.min(100,time-hanaLastTime);hanaLastTime=time;
+  hanaScrollY+=pixelsPerSecond*elapsed/1000;
+  window.scrollTo(0,hanaScrollY);
   if(window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-3){stopHanaScroll();return}
   hanaScrollFrame=requestAnimationFrame(hanaScrollStep);
 }
 function toggleHanaScroll(){
   if(hanaScrolling){stopHanaScroll();return}
   if(!byId("hanaOut")?.querySelector(".hanaRows"))renderHana();
-  hanaScrolling=true;hanaLastTime=0;const b=byId("hanaScroll");if(b)b.textContent="⏸ 停止";
+  hanaScrolling=true;hanaLastTime=0;hanaScrollY=window.scrollY;const b=byId("hanaScroll");if(b)b.textContent="⏸ 停止";
   b?.closest(".hanaScrollControls")?.classList.add("scrolling");hanaScrollFrame=requestAnimationFrame(hanaScrollStep);
 }
 ["C","G","Am","F"].forEach(hanaAddSlot);
@@ -607,6 +610,7 @@ byId("hanaAdd")?.addEventListener("click",()=>hanaAddSlot());
 byId("hanaClear")?.addEventListener("click",()=>{stopHanaScroll();hanaSlots=[];drawHanaSlots();if(byId("hanaOut"))byId("hanaOut").innerHTML=""});
 byId("hanaShow")?.addEventListener("click",()=>{stopHanaScroll();renderHana()});
 byId("hanaScroll")?.addEventListener("click",toggleHanaScroll);
+byId("hanaBpm")?.addEventListener("input",e=>{const label=byId("hanaBpmValue");if(label)label.textContent=e.target.value});
 
 // ---------- PWA ----------
 if("serviceWorker" in navigator){
