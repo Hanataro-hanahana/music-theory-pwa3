@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#f6f7f9">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
-<title>音楽理論アシスタント</title>
+<title>音楽ツール</title>
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--text:#111827;--sub:#667085;--line:#e6e8ec;--accent:#4f46e5;--accent2:#eef2ff;--shadow:0 2px 12px rgba(15,23,42,.06)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;-webkit-font-smoothing:antialiased}
@@ -14,10 +14,11 @@ header{padding:18px 18px 10px;background:rgba(246,247,249,.96);position:sticky;t
 main{max-width:760px;margin:auto;padding:8px 14px 100px}.page{display:none}.page.active{display:block}.hero{padding:16px 4px 10px}.hero h2{font-size:28px;margin:0 0 5px}.hero p{color:var(--sub);margin:0}
 .searchbox{display:flex;background:var(--card);border:1px solid var(--line);border-radius:15px;padding:5px;box-shadow:var(--shadow);margin:12px 0 18px}.searchbox input{border:0;outline:0;flex:1;background:transparent;padding:10px;font-size:16px;min-width:0}.searchbox button{border:0;background:var(--text);color:white;border-radius:11px;padding:0 15px;font-weight:700}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.tile{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:17px 14px;min-height:118px;text-align:left;box-shadow:var(--shadow);cursor:pointer}.tile .ico{font-size:28px}.tile b{display:block;font-size:16px;margin-top:8px}.tile span{font-size:12px;color:var(--sub);display:block;margin-top:3px}
+.pixelIcon{width:68px;height:68px;border-radius:13px;background-image:url('./hana-menu-sprites.png');background-size:400% 200%;background-repeat:no-repeat;image-rendering:pixelated;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}.pixelIcon.p1{background-position:0 0}.pixelIcon.p2{background-position:33.333% 0}.pixelIcon.p3{background-position:66.666% 0}.pixelIcon.p4{background-position:100% 0}.pixelIcon.p5{background-position:0 100%}.pixelIcon.p6{background-position:33.333% 100%}.pixelIcon.p7{background-position:66.666% 100%}.pixelIcon.p8{background-position:100% 100%}.pixelIcon.dizzy{background-image:url('./hana-menu-dizzy.png');background-size:cover;background-position:center}.homeLink{display:block;width:100%;margin:24px 0 5px;padding:13px;border:1px solid #f0b7cf;border-radius:13px;background:#fff3f8;color:#9d174d;text-align:center;font-weight:800;cursor:pointer}
 .card{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:16px;margin:11px 0;box-shadow:var(--shadow)}.card h2{font-size:19px;margin:0 0 12px}.back{border:0;background:none;padding:5px 0;color:var(--accent);font-size:15px;font-weight:700}
 label{display:block;color:var(--sub);font-size:12px;font-weight:700;margin:12px 0 6px}input,select{width:100%;min-height:47px;border:1px solid #d5d9e0;border-radius:12px;background:white;padding:10px 12px;font-size:16px;color:var(--text)}button.primary{width:100%;min-height:47px;border:0;border-radius:12px;background:var(--text);color:#fff;font-size:15px;font-weight:800;margin-top:12px}
 .result{margin-top:13px}.resultbox{background:#f8f9fc;border-radius:13px;padding:12px;margin-top:9px}.row{display:flex;gap:8px}.row>*{flex:1}.tag{display:inline-block;background:var(--accent2);color:#3730a3;border-radius:999px;padding:5px 9px;margin:2px;font-size:12px}.metric{font-size:26px;font-weight:800}.muted{color:var(--sub);font-size:13px}.item{padding:11px 0;border-bottom:1px solid var(--line)}.item:last-child{border-bottom:0}.item b{font-size:13px}.value{font-size:16px;margin-top:3px;line-height:1.55}
-.bottom{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.95);border-top:1px solid var(--line);backdrop-filter:blur(12px);padding:6px 5px calc(6px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);z-index:20}.bottom button{background:none;border:0;color:#667085;font-size:10px;padding:5px}.bottom button.active{color:var(--accent);font-weight:800}.bottom .big{font-size:20px;line-height:19px}
+.bottom{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.95);border-top:1px solid var(--line);backdrop-filter:blur(12px);padding:6px 5px calc(6px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(2,1fr);z-index:20}.bottom button{background:none;border:0;color:#667085;font-size:10px;padding:5px}.bottom button.active{color:var(--accent);font-weight:800}.bottom .big{font-size:20px;line-height:19px}
 .sectiontitle{display:flex;justify-content:space-between;align-items:center;margin:17px 2px 8px}.sectiontitle b{font-size:15px}.sectiontitle span{font-size:12px;color:var(--sub)}
 @media(min-width:650px){.grid{grid-template-columns:repeat(3,1fr)}}
 
@@ -37,23 +38,20 @@ label{display:block;color:var(--sub);font-size:12px;font-weight:700;margin:12px 
 </style>
 </head>
 <body>
-<header><h1>🎵 音楽理論</h1><p>作曲・コード・進行をすばやく調べる</p></header>
+<header><h1>🎵 音楽ツール</h1><p>あくまでも参考　必ず自分で音の鳴り方を確認してください</p></header>
 <main>
 <section id="home" class="page active">
-<div class="hero"><h2>何を調べる？</h2><p>必要な機能をタップしてください。</p></div>
 <div class="searchbox"><input id="quick" placeholder="コード・進行・キーワード"><button id="quickBtn">検索</button></div>
 <div class="grid">
-<div class="tile" data-page="chord"><div class="ico">🎹</div><b>コード辞典</b><span>基本コード・構成音・関連情報</span></div>
-<div class="tile" data-page="guitar"><div class="ico">🎸</div><b>ギター辞典</b><span>押さえ方・ストローク・弾き方</span></div>
-<div class="tile" data-page="hana"><div class="ico">🌸</div><b>Hanaフレット</b><span>選んだポジションで進行の指板だけを表示</span></div>
-<div class="tile" data-page="fraction"><div class="ico">🎹</div><b>分数コード</b><span>ベース音・分類・使い方</span></div><div class="tile" data-page="progress"><div class="ico">🔄</div><b>コード進行</b><span>進行を探す・分析する</span></div>
-<div class="tile" data-page="scale"><div class="ico">🎼</div><b>スケール</b><span>キーと使用音を確認</span></div>
-<div class="tile" data-page="mod"><div class="ico">↔️</div><b>転調</b><span>転調先と候補を探す</span></div>
-<div class="tile" data-page="compose"><div class="ico">✍️</div><b>作曲支援</b><span>メロディ・構成・発想</span></div>
-<div class="tile" data-page="arrange"><div class="ico">🎸</div><b>アレンジ</b><span>楽器別のアイデア</span></div>
+<div class="tile" data-page="chord"><div class="pixelIcon p1"></div><b>コード辞典</b><span>基本コード・構成音・関連情報</span></div>
+<div class="tile" data-page="guitar"><div class="pixelIcon p2"></div><b>ギター辞典</b><span>押さえ方・ストローク・弾き方</span></div>
+<div class="tile" data-page="hana"><div class="pixelIcon dizzy"></div><b>Hanaフレット</b><span>選んだポジションで進行の指板だけを表示</span></div>
+<div class="tile" data-page="fraction"><div class="pixelIcon p3"></div><b>分数コード</b><span>ベース音・分類・使い方</span></div><div class="tile" data-page="progress"><div class="pixelIcon p4"></div><b>コード進行</b><span>進行を探す・分析する</span></div>
+<div class="tile" data-page="scale"><div class="pixelIcon p5"></div><b>スケール</b><span>キーと使用音を確認</span></div>
+<div class="tile" data-page="mod"><div class="pixelIcon p6"></div><b>転調</b><span>転調先と候補を探す</span></div>
+<div class="tile" data-page="compose"><div class="pixelIcon p7"></div><b>作曲支援</b><span>メロディ・構成・発想</span></div>
+<div class="tile" data-page="arrange"><div class="pixelIcon p8"></div><b>アレンジ</b><span>楽器別のアイデア</span></div>
 </div>
-<div class="sectiontitle"><b>データベース</b><span id="total"></span></div>
-<div class="card" id="dbSummary"></div>
 </section>
 
 <section id="chord" class="page"><button class="back" data-page="home">‹ ホーム</button><div class="card"><h2>🎹 コード辞典</h2><p class="muted">キー（ルート音）を選ぶと、dim・dim7・m・7など、そのキーのコード種類だけを表示します。コード進行の提案とは完全に分離しています。</p><div class="row"><div><label>キー（ルート音）</label><select id="chordRoot"></select></div><div><label>コード種類</label><select id="codes"></select></div></div><button class="primary" id="cbtn">コードを調べる</button><div id="cout" class="result"></div><div id="chordGuitar" class="result"></div></div><div class="card"><h2>🎸 同じコードの別ポジション</h2><p class="muted">同じ構成音のまま、重複を除いたロー／ミドル／ハイポジションを比較します。</p><div id="chordVoicings" class="result"></div></div></section>
@@ -80,6 +78,7 @@ label{display:block;color:var(--sub);font-size:12px;font-weight:700;margin:12px 
 
 <section id="search" class="page"><button class="back" data-page="home">‹ ホーム</button><div class="card"><h2>🔎 全DB検索</h2><input id="gq" placeholder="何でも検索"><button class="primary" id="gbtn">検索</button><div id="gout" class="result"></div></div></section>
 </main>
-<nav class="bottom"><button data-page="home" class="active"><div class="big">⌂</div>ホーム</button><button data-page="chord"><div class="big">♬</div>コード</button><button data-page="progress"><div class="big">↻</div>進行</button><button data-page="search"><div class="big">⌕</div>検索</button></nav>
+<nav class="bottom"><button data-page="home" class="active"><div class="big">⌂</div>ホーム</button><button data-page="search"><div class="big">⌕</div>検索</button></nav>
+<script>document.querySelectorAll('.page:not(#home)').forEach(function(section){var button=document.createElement('button');button.type='button';button.className='homeLink';button.dataset.page='home';button.textContent='⌂ ホームへ戻る';section.appendChild(button)});</script>
 <script src="./db.js"></script><script src="./app.js"></script>
 </body></html>
