@@ -206,17 +206,17 @@ function tensionEntries(row){
   }
   return out;
 }
-function chordSvg(code,notation,row=null,showToneMap=false){
+function chordSvg(code,notation,row=null,showToneMap=false,compact=false){
   const raw=parseFingering(notation);
   if(raw.length!==6)return `<div class="muted">押さえ方データ未登録</div>`;
   const display=[raw[5],raw[4],raw[3],raw[2],raw[1],raw[0]]; // top 1st → bottom 6th
   const positives=raw.filter(x=>x>0),min=positives.length?Math.min(...positives):1,max=positives.length?Math.max(...positives):1;
   let start=min>4?Math.max(1,min-1):1; if(max-start>4)start=Math.max(1,max-4);
-  const fretCount=5,W=360,H=270,left=78,right=330,top=68,bottom=225,rowH=(bottom-top)/5,colW=(right-left)/fretCount;
+  const fretCount=5,W=360,H=compact?232:270,left=compact?30:78,right=compact?350:330,top=compact?62:68,bottom=compact?220:225,rowH=(bottom-top)/5,colW=(right-left)/fretCount,symbolX=compact?14:61;
   let svg=`<svg class="chordSvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(code)}のギターコードダイアグラム">`;
   svg+=`<text x="180" y="27" text-anchor="middle" font-size="21" font-weight="800">${esc(code)}</text>`;
   for(let j=0;j<fretCount;j++){const fret=start+j,x=left+colW*(j+.5);svg+=`<text x="${x}" y="54" text-anchor="middle" font-size="14" font-weight="800">${fret}</text>`}
-  for(let i=0;i<6;i++){const y=top+rowH*i;svg+=`<text x="34" y="${y+5}" text-anchor="middle" font-size="14" font-weight="800">${i+1}弦</text><line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#222" stroke-width="2"/>`}
+  for(let i=0;i<6;i++){const y=top+rowH*i;svg+=`${compact?"":`<text x="34" y="${y+5}" text-anchor="middle" font-size="14" font-weight="800">${i+1}弦</text>`}<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" stroke="#222" stroke-width="2"/>`}
   for(let j=0;j<=fretCount;j++){const x=left+colW*j;svg+=`<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="#222" stroke-width="${j===0&&start===1?5:2}"/>`}
   const chordPcs=new Set(noteTokens(row?.["構成音"]).map(n=>NOTE_PC[n])),parsed=parseChordName(code),rootPc=NOTE_PC[parsed?.root];
   const sounding=raw.map((f,i)=>f>=0?{pc:(TUNING_PC[i]+f)%12,midi:TUNING_MIDI[i]+f}:null).filter(Boolean);
@@ -233,11 +233,11 @@ function chordSvg(code,notation,row=null,showToneMap=false){
   for(let i=0;i<6;i++){
     const val=display[i],y=top+rowH*i;
     const stringIndex=5-i,playedPc=val>=0?(TUNING_PC[stringIndex]+val)%12:null,isLowestRoot=val>=0&&playedPc===rootPc&&lowestRoot&&TUNING_MIDI[stringIndex]+val===lowestRoot.midi;
-    if(val===0)svg+=isLowestRoot?`<circle cx="61" cy="${y}" r="11" fill="#dc2626"/><text x="61" y="${y+4}" text-anchor="middle" font-size="10" font-weight="800" fill="white">R</text>`:`<text x="61" y="${y+5}" text-anchor="middle" font-size="17" font-weight="800">○</text>`;
-    else if(val<0)svg+=`<text x="61" y="${y+5}" text-anchor="middle" font-size="17" font-weight="800">×</text>`;
+    if(val===0)svg+=isLowestRoot?`<circle cx="${symbolX}" cy="${y}" r="11" fill="#dc2626"/><text x="${symbolX}" y="${y+4}" text-anchor="middle" font-size="10" font-weight="800" fill="white">R</text>`:`<text x="${symbolX}" y="${y+5}" text-anchor="middle" font-size="17" font-weight="800">○</text>`;
+    else if(val<0)svg+=`<text x="${symbolX}" y="${y+5}" text-anchor="middle" font-size="17" font-weight="800">×</text>`;
     else{const rel=val-start;if(rel>=0&&rel<fretCount){const x=left+colW*(rel+.5);svg+=`<circle cx="${x}" cy="${y}" r="11" fill="${isLowestRoot?"#dc2626":"#1d4ed8"}" stroke="white" stroke-width="2"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="${isLowestRoot?10:9}" font-weight="800" fill="white">${isLowestRoot?"R":val}</text>`}}
   }
-  svg+=`<text x="180" y="248" text-anchor="middle" font-size="11" fill="#667085">上：1弦 / 下：6弦　数字：実フレット番号</text>`;
+  if(!compact)svg+=`<text x="180" y="248" text-anchor="middle" font-size="11" fill="#667085">上：1弦 / 下：6弦　数字：実フレット番号</text>`;
   if(showToneMap&&row)svg+=`<circle cx="65" cy="264" r="6" fill="#dc2626"/><text x="76" y="268" font-size="9" fill="#475467">最低R</text><circle cx="120" cy="264" r="6" fill="#f59e0b"/><text x="130" y="268" font-size="9" fill="#475467">9系</text><circle cx="174" cy="264" r="6" fill="#10b981"/><text x="184" y="268" font-size="9" fill="#475467">11系</text><circle cx="235" cy="264" r="6" fill="#8b5cf6"/><text x="245" y="268" font-size="9" fill="#475467">13系</text><text x="285" y="268" font-size="9" fill="#475467">${tensions.length?"DB登録":"登録なし"}</text>`;
   svg+=`</svg>`;
   return svg;
@@ -559,9 +559,13 @@ byId("showProg")?.addEventListener("click",()=>{
 // ---------- Hana Fret (standalone progression fretboards) ----------
 let hanaSlots=[];
 function hanaAddSlot(code){if(hanaSlots.length>=64)return;hanaSlots.push(code||codes[0]?.["コード"]||"");drawHanaSlots()}
+function hanaBaseFor(code){const c=parseChordName(code);if(!c)return"";return c.root+(/^m(?!aj)/i.test(c.quality)?"m":"")}
+const hanaBases=uniq(codes.map(r=>hanaBaseFor(r["コード"])));
+function hanaCodesForBase(base){return codes.map(r=>r["コード"]).filter(code=>hanaBaseFor(code)===base)}
 function drawHanaSlots(){
   const e=byId("hanaProgress");if(!e)return;
-  e.innerHTML=hanaSlots.map((v,i)=>`<div class="slot"><div class="slothead"><span>${i+1}小節目</span><button class="remove" data-hana-i="${i}" type="button">×</button></div><select data-hana-slot="${i}">${codes.map(r=>`<option value="${esc(r["コード"])}" ${r["コード"]===v?"selected":""}>${esc(r["コード"])}</option>`).join("")}</select></div>`).join("");
+  e.innerHTML=hanaSlots.map((v,i)=>{const base=hanaBaseFor(v)||hanaBases[0],related=hanaCodesForBase(base);return `<div class="slot"><div class="slothead"><span>${i+1}小節目</span><button class="remove" data-hana-i="${i}" type="button">×</button></div><label>キー</label><select data-hana-base="${i}">${hanaBases.map(x=>`<option value="${esc(x)}" ${x===base?"selected":""}>${esc(x)}</option>`).join("")}</select><label>コード種類</label><select data-hana-slot="${i}">${related.map(code=>`<option value="${esc(code)}" ${code===v?"selected":""}>${esc(code)}</option>`).join("")}</select></div>`}).join("");
+  e.querySelectorAll("select[data-hana-base]").forEach(s=>s.addEventListener("change",ev=>{const i=Number(ev.target.dataset.hanaBase);hanaSlots[i]=hanaCodesForBase(ev.target.value)[0]||"";drawHanaSlots()}));
   e.querySelectorAll("select[data-hana-slot]").forEach(s=>s.addEventListener("change",ev=>hanaSlots[Number(ev.target.dataset.hanaSlot)]=ev.target.value));
   e.querySelectorAll("button[data-hana-i]").forEach(b=>b.addEventListener("click",()=>{hanaSlots.splice(Number(b.dataset.hanaI),1);drawHanaSlots()}));
 }
@@ -577,7 +581,7 @@ function renderHana(){
   if(!hanaSlots.length){out.innerHTML='<div class="muted">コードを1つ以上追加してください。</div>';return}
   const position=byId("hanaPosition")?.value||"open";
   out.innerHTML=`<div class="hanaRows">${Array.from({length:Math.ceil(hanaSlots.length/4)},(_,ri)=>{
-    const cards=hanaSlots.slice(ri*4,ri*4+4).map(code=>{const f=hanaForm(code,position);return `<div class="hanaCard">${f?chordSvg(code,f.form):`<div class="muted">${esc(code)}：未登録</div>`}</div>`}).join("");
+    const cards=hanaSlots.slice(ri*4,ri*4+4).map(code=>{const f=hanaForm(code,position);return `<div class="hanaCard">${f?chordSvg(code,f.form,null,false,true):`<div class="muted">${esc(code)}：未登録</div>`}</div>`}).join("");
     return `<div class="progressRow"><div class="rowLabel">${ri*4+1}〜${Math.min(ri*4+4,hanaSlots.length)}小節</div><div class="hanaRowViewport"><div class="hanaDiagrams">${cards}</div></div></div>`;
   }).join("")}</div>`;
   out.scrollIntoView({behavior:"smooth",block:"start"});
@@ -611,6 +615,31 @@ byId("hanaClear")?.addEventListener("click",()=>{stopHanaScroll();hanaSlots=[];d
 byId("hanaShow")?.addEventListener("click",()=>{stopHanaScroll();renderHana()});
 byId("hanaScroll")?.addEventListener("click",toggleHanaScroll);
 byId("hanaBpm")?.addEventListener("input",e=>{const label=byId("hanaBpmValue");if(label)label.textContent=e.target.value});
+
+const HANA_STORAGE_KEY="musicTheoryHanaProgressionsV1";
+function hanaSavedData(){try{return JSON.parse(localStorage.getItem(HANA_STORAGE_KEY)||"{}")||{}}catch(_){return{}}}
+function hanaSaveStatus(message){const e=byId("hanaSaveStatus");if(e)e.textContent=message}
+function updateHanaSaved(){const e=byId("hanaSaved");if(!e)return;const data=hanaSavedData(),names=Object.keys(data).sort((a,b)=>(data[b].updated||0)-(data[a].updated||0));e.innerHTML=names.length?names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join(""):'<option value="">保存済みの進行はありません</option>'}
+function saveHanaProgression(){
+  document.querySelectorAll("#hanaProgress select[data-hana-slot]").forEach(s=>hanaSlots[Number(s.dataset.hanaSlot)]=s.value);
+  const name=String(byId("hanaSaveName")?.value||"").trim();if(!name){hanaSaveStatus("保存名を入力してください。");return}
+  try{const data=hanaSavedData();data[name]={slots:[...hanaSlots],position:byId("hanaPosition")?.value||"open",bpm:Number(byId("hanaBpm")?.value||100),updated:Date.now()};localStorage.setItem(HANA_STORAGE_KEY,JSON.stringify(data));updateHanaSaved();byId("hanaSaved").value=name;hanaSaveStatus(`「${name}」を保存しました。`)}catch(_){hanaSaveStatus("この端末では保存できませんでした。")}
+}
+function loadHanaProgression(){const name=byId("hanaSaved")?.value,item=hanaSavedData()[name];if(!item)return;stopHanaScroll();hanaSlots=(item.slots||[]).slice(0,64);if(byId("hanaPosition"))byId("hanaPosition").value=item.position||"open";if(byId("hanaBpm")){byId("hanaBpm").value=item.bpm||100;byId("hanaBpmValue").textContent=byId("hanaBpm").value}if(byId("hanaSaveName"))byId("hanaSaveName").value=name;drawHanaSlots();renderHana();hanaSaveStatus(`「${name}」を呼び出しました。`)}
+function deleteHanaProgression(){const name=byId("hanaSaved")?.value;if(!name)return;try{const data=hanaSavedData();delete data[name];localStorage.setItem(HANA_STORAGE_KEY,JSON.stringify(data));updateHanaSaved();hanaSaveStatus(`「${name}」を削除しました。`)}catch(_){hanaSaveStatus("削除できませんでした。")}}
+updateHanaSaved();
+byId("hanaSave")?.addEventListener("click",saveHanaProgression);byId("hanaLoad")?.addEventListener("click",loadHanaProgression);byId("hanaDelete")?.addEventListener("click",deleteHanaProgression);
+byId("hanaTop")?.addEventListener("click",()=>{stopHanaScroll();const target=byId("hanaOut")?.querySelector(".hanaRows")||byId("hana");target?.scrollIntoView({behavior:"smooth",block:"start"})});
+
+let hanaWakeLock=null;
+function hanaWakeStatus(message){const e=byId("hanaWakeStatus");if(e)e.textContent=message}
+async function stopHanaWake(){if(hanaWakeLock){try{await hanaWakeLock.release()}catch(_){}hanaWakeLock=null}const b=byId("hanaWake");if(b)b.textContent="☾ 演奏モード";hanaWakeStatus("演奏モードOFF")}
+async function startHanaWake(){
+  if(!("wakeLock" in navigator)){hanaWakeStatus("この端末は画面スリープ防止に対応していません。");return}
+  try{hanaWakeLock=await navigator.wakeLock.request("screen");const b=byId("hanaWake");if(b)b.textContent="☀ 演奏モード解除";hanaWakeStatus("演奏モードON：画面スリープを防止中");hanaWakeLock.addEventListener("release",()=>{hanaWakeLock=null})}catch(_){hanaWakeStatus("演奏モードを開始できませんでした。")}
+}
+byId("hanaWake")?.addEventListener("click",()=>hanaWakeLock?stopHanaWake():startHanaWake());
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&byId("hanaWakeStatus")?.textContent.includes("ON")&&!hanaWakeLock)startHanaWake()});
 
 // ---------- PWA ----------
 if("serviceWorker" in navigator){
