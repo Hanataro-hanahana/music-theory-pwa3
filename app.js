@@ -641,6 +641,52 @@ async function startHanaWake(){
 byId("hanaWake")?.addEventListener("click",()=>hanaWakeLock?stopHanaWake():startHanaWake());
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&byId("hanaWakeStatus")?.textContent.includes("ON")&&!hanaWakeLock)startHanaWake()});
 
+// ---------- Reverse chord finder ----------
+const reverseFrets=Array(6).fill(-1); // 6th string -> 1st string
+function setEquals(a,b){return a.size===b.size&&[...a].every(x=>b.has(x))}
+function setSubset(a,b){return[...a].every(x=>b.has(x))}
+function reverseSounding(){return reverseFrets.map((f,i)=>f>=0?{stringIndex:i,stringNo:6-i,fret:f,pc:(TUNING_PC[i]+f)%12,midi:TUNING_MIDI[i]+f,note:SHARP_NAMES[(TUNING_PC[i]+f)%12]}:null).filter(Boolean)}
+function reverseDisplayName(row,lowestPc){const code=row["コード"],root=NOTE_PC[parseChordName(code)?.root];return lowestPc!==undefined&&root!==undefined&&lowestPc!==root?`${code}/${SHARP_NAMES[lowestPc]}`:code}
+function reverseMatches(inputSet,lowestPc){
+  if(inputSet.size<2)return[];
+  const out=[];
+  for(const row of codes){
+    const target=new Set(noteTokens(row["構成音"]).map(n=>NOTE_PC[n]));if(!target.size)continue;
+    const intersection=[...inputSet].filter(x=>target.has(x)).length,union=new Set([...inputSet,...target]).size;
+    let type="partial",label="部分一致",score=Math.round(intersection/union*100),missing=[...target].filter(x=>!inputSet.has(x));
+    if(setEquals(inputSet,target)){type="exact";label="完全一致";score=100;missing=[]}
+    else if(setSubset(inputSet,target)&&missing.length<=2){type="omission";label="省略コード";score=Math.round(inputSet.size/target.size*100)}
+    else if(intersection<2||score<40)continue;
+    out.push({row,type,label,score,missing,name:reverseDisplayName(row,lowestPc),target});
+  }
+  const order={exact:0,omission:1,partial:2};
+  return out.sort((a,b)=>order[a.type]-order[b.type]||b.score-a.score||a.missing.length-b.missing.length||a.name.localeCompare(b.name));
+}
+function renderReverse(){
+  const sounding=reverseSounding(),inputSet=new Set(sounding.map(x=>x.pc)),lowest=sounding.slice().sort((a,b)=>a.midi-b.midi)[0],summary=byId("reverseSummary"),results=byId("reverseResults"),completion=byId("reverseCompletion");
+  if(summary)summary.innerHTML=sounding.length?`<div class="reverseSummary"><b>入力中の実音：</b>${uniq(sounding.map(x=>x.note)).map(n=>`<span class="tag">${esc(n)}</span>`).join("")}<div class="muted">最低音：${esc(lowest.note)}｜6弦→1弦：${esc(fingeringText(reverseFrets))}</div></div>`:'<div class="muted">指板をタップしてください。</div>';
+  if(inputSet.size<2){if(results)results.innerHTML='<div class="muted">別の音高を含む2音以上を入力すると検索します。</div>';if(completion)completion.innerHTML='<div class="muted">2音以上入力すると表示します。</div>';return}
+  const matches=reverseMatches(inputSet,lowest?.pc),top=matches.slice(0,18);
+  if(results)results.innerHTML=top.length?top.map(x=>`<div class="reverseCandidate ${x.type}"><b>${esc(x.name)}</b><span class="matchBadge">${esc(x.label)} ${x.score}%</span><div class="muted">構成音：${esc(x.row["構成音"]||"")}${x.missing.length?`<br>省略中：${esc(x.missing.map(pc=>SHARP_NAMES[pc]).join(" / "))}`:""}</div></div>`).join(""):'<div class="muted">DB登録コードに候補がありません。</div>';
+  const additions=[];
+  for(const row of codes){const target=new Set(noteTokens(row["構成音"]).map(n=>NOTE_PC[n]));if(setSubset(inputSet,target)&&target.size===inputSet.size+1){const missing=[...target].find(pc=>!inputSet.has(pc)),name=reverseDisplayName(row,lowest?.pc);additions.push({name,note:SHARP_NAMES[missing],tones:row["構成音"]})}}
+  const uniqueAdd=[],seen=new Set();for(const x of additions)if(!seen.has(`${x.name}|${x.note}`)){seen.add(`${x.name}|${x.note}`);uniqueAdd.push(x)}
+  if(completion)completion.innerHTML=uniqueAdd.length?uniqueAdd.slice(0,16).map(x=>`<div class="completionCard"><b>${esc(x.note)} を加える → ${esc(x.name)}</b><div class="muted">構成音：${esc(x.tones||"")}</div></div>`).join(""):'<div class="muted">1音追加で成立するDBコードはありません。</div>';
+}
+function drawReverseBoard(){
+  const board=byId("reverseBoard");if(!board)return;
+  let html='<div class="reverseCorner">弦/フレット</div><div class="reverseFretHead">×</div>'+Array.from({length:13},(_,f)=>`<div class="reverseFretHead">${f}</div>`).join("");
+  for(let stringNo=1;stringNo<=6;stringNo++){
+    const i=6-stringNo;html+=`<div class="reverseStringLabel">${stringNo}弦</div>`;
+    html+=`<button type="button" class="reverseCell mute ${reverseFrets[i]<0?"selected":""}" data-reverse-string="${i}" data-reverse-fret="-1" aria-label="${stringNo}弦をミュート">×</button>`;
+    for(let f=0;f<=12;f++){const note=SHARP_NAMES[(TUNING_PC[i]+f)%12];html+=`<button type="button" class="reverseCell ${reverseFrets[i]===f?"selected":""}" data-reverse-string="${i}" data-reverse-fret="${f}" aria-label="${stringNo}弦 ${f}フレット ${note}"><span class="note">${note}</span></button>`}
+  }
+  board.innerHTML=html;
+  board.querySelectorAll("button[data-reverse-string]").forEach(b=>b.addEventListener("click",()=>{const i=Number(b.dataset.reverseString),f=Number(b.dataset.reverseFret);reverseFrets[i]=reverseFrets[i]===f?-1:f;drawReverseBoard();renderReverse()}));
+}
+drawReverseBoard();renderReverse();
+byId("reverseClear")?.addEventListener("click",()=>{reverseFrets.fill(-1);drawReverseBoard();renderReverse()});
+
 // ---------- PWA ----------
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(err=>console.warn("Service Worker registration failed",err)));
