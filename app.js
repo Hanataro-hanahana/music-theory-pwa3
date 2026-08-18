@@ -556,6 +556,58 @@ byId("showProg")?.addEventListener("click",()=>{
   }
 });
 
+// ---------- Hana Fret (standalone progression fretboards) ----------
+let hanaSlots=[];
+function hanaAddSlot(code){if(hanaSlots.length>=64)return;hanaSlots.push(code||codes[0]?.["コード"]||"");drawHanaSlots()}
+function drawHanaSlots(){
+  const e=byId("hanaProgress");if(!e)return;
+  e.innerHTML=hanaSlots.map((v,i)=>`<div class="slot"><div class="slothead"><span>${i+1}小節目</span><button class="remove" data-hana-i="${i}" type="button">×</button></div><select data-hana-slot="${i}">${codes.map(r=>`<option value="${esc(r["コード"])}" ${r["コード"]===v?"selected":""}>${esc(r["コード"])}</option>`).join("")}</select></div>`).join("");
+  e.querySelectorAll("select[data-hana-slot]").forEach(s=>s.addEventListener("change",ev=>hanaSlots[Number(ev.target.dataset.hanaSlot)]=ev.target.value));
+  e.querySelectorAll("button[data-hana-i]").forEach(b=>b.addEventListener("click",()=>{hanaSlots.splice(Number(b.dataset.hanaI),1);drawHanaSlots()}));
+}
+function hanaForm(code,position){
+  const d=dictionaryForms(code);
+  if(position==="high")return d.groups.high||d.basic;
+  if(position==="low")return d.groups.low||d.basic;
+  return d.basic;
+}
+function renderHana(){
+  const out=byId("hanaOut");if(!out)return;
+  document.querySelectorAll("#hanaProgress select[data-hana-slot]").forEach(s=>hanaSlots[Number(s.dataset.hanaSlot)]=s.value);
+  if(!hanaSlots.length){out.innerHTML='<div class="muted">コードを1つ以上追加してください。</div>';return}
+  const position=byId("hanaPosition")?.value||"open";
+  out.innerHTML=`<div class="hanaRows">${Array.from({length:Math.ceil(hanaSlots.length/4)},(_,ri)=>{
+    const cards=hanaSlots.slice(ri*4,ri*4+4).map(code=>{const f=hanaForm(code,position);return `<div class="hanaCard">${f?chordSvg(code,f.form):`<div class="muted">${esc(code)}：未登録</div>`}</div>`}).join("");
+    return `<div class="progressRow"><div class="rowLabel">${ri*4+1}〜${Math.min(ri*4+4,hanaSlots.length)}小節</div><div class="hanaRowViewport"><div class="hanaDiagrams">${cards}</div></div></div>`;
+  }).join("")}</div>`;
+  out.scrollIntoView({behavior:"smooth",block:"start"});
+}
+let hanaScrollFrame=0,hanaScrolling=false,hanaLastTime=0;
+function stopHanaScroll(){
+  hanaScrolling=false;if(hanaScrollFrame)cancelAnimationFrame(hanaScrollFrame);hanaScrollFrame=0;hanaLastTime=0;
+  const b=byId("hanaScroll");if(b)b.textContent="▶ 自動スクロール";
+  byId("hanaScroll")?.closest(".hanaScrollControls")?.classList.remove("scrolling");
+}
+function hanaScrollStep(time){
+  if(!hanaScrolling||!byId("hana")?.classList.contains("active")){stopHanaScroll();return}
+  if(!hanaLastTime)hanaLastTime=time;
+  const speed=Number(byId("hanaSpeed")?.value||32),dy=speed*Math.min(50,time-hanaLastTime)/1000;hanaLastTime=time;
+  window.scrollBy(0,dy);
+  if(window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-3){stopHanaScroll();return}
+  hanaScrollFrame=requestAnimationFrame(hanaScrollStep);
+}
+function toggleHanaScroll(){
+  if(hanaScrolling){stopHanaScroll();return}
+  if(!byId("hanaOut")?.querySelector(".hanaRows"))renderHana();
+  hanaScrolling=true;hanaLastTime=0;const b=byId("hanaScroll");if(b)b.textContent="⏸ 停止";
+  b?.closest(".hanaScrollControls")?.classList.add("scrolling");hanaScrollFrame=requestAnimationFrame(hanaScrollStep);
+}
+["C","G","Am","F"].forEach(hanaAddSlot);
+byId("hanaAdd")?.addEventListener("click",()=>hanaAddSlot());
+byId("hanaClear")?.addEventListener("click",()=>{stopHanaScroll();hanaSlots=[];drawHanaSlots();if(byId("hanaOut"))byId("hanaOut").innerHTML=""});
+byId("hanaShow")?.addEventListener("click",()=>{stopHanaScroll();renderHana()});
+byId("hanaScroll")?.addEventListener("click",toggleHanaScroll);
+
 // ---------- PWA ----------
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(err=>console.warn("Service Worker registration failed",err)));
