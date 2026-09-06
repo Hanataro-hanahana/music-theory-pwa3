@@ -50,7 +50,7 @@ label{display:block;color:var(--sub);font-size:12px;font-weight:700;margin:12px 
 <div class="tile" data-page="reverse"><div class="pixelIcon p9"></div><b>逆引きコード検索</b><span>指板をタップしてコード名を検索</span></div>
 <div class="tile" data-page="fraction"><div class="pixelIcon p4"></div><b>分数コード</b><span>ベース音・分類・使い方</span></div><div class="tile" data-page="progress"><div class="pixelIcon p5"></div><b>コード進行</b><span>進行を探す・分析する</span></div>
 <div class="tile" data-page="scale"><div class="pixelIcon p6"></div><b>スケール</b><span>キーと使用音を確認</span></div>
-<div class="tile" data-page="mod"><div class="pixelIcon p7"></div><b>転調</b><span>転調先と候補を探す</span></div>
+<div class="tile" data-page="mod"><div class="pixelIcon p7"></div><b>転調</b><span>転調先と元のキーへの戻り方を探す</span></div>
 <div class="tile" data-page="compose"><div class="pixelIcon p8"></div><b>作曲支援</b><span>メロディ・構成・発想</span></div>
 <div class="tile" data-page="arrange"><div class="pixelIcon p9"></div><b>アレンジ</b><span>楽器別のアイデア</span></div>
 </div>
@@ -63,7 +63,7 @@ label{display:block;color:var(--sub);font-size:12px;font-weight:700;margin:12px 
 
 <section id="scale" class="page"><button class="back" data-page="home">‹ ホーム</button><div class="card"><h2>🎼 スケール</h2><label>種類</label><select id="sm"><option>メジャー</option><option>マイナー</option></select><label>キー</label><select id="sk"></select><button class="primary" id="sbtn">スケールを見る</button><div id="sout" class="result"></div></div></section>
 
-<section id="mod" class="page"><button class="back" data-page="home">‹ ホーム</button><div class="card"><h2>↔️ 転調</h2><div class="row"><div><label>現在のキー</label><select id="mk1"></select></div><div><label>転調先</label><select id="mk2"></select></div></div><button class="primary" id="mbtn">転調候補を見る</button><div id="mout" class="result"></div></div></section>
+<section id="mod" class="page"><button class="back" data-page="home">‹ ホーム</button><div class="card"><h2>↔️ 転調と元のキーへの戻り方</h2><p class="muted">現在のキーを元のキーとして、転調方法と転調後からの戻り方を表示します。</p><div class="row"><div><label>現在のキー（元のキー）</label><select id="mk1"></select></div><div><label>転調先</label><select id="mk2"></select></div></div><button class="primary" id="mbtn">転調と戻り方を見る</button><div id="mout" class="result"></div></div></section>
 
 <section id="compose" class="page"><button class="back" data-page="home">‹ ホーム</button>
 <div class="card"><h2>✍️ 作曲支援</h2><label>方向・テーマ</label><select id="co"></select><button class="primary" id="cobtn">アイデアを見る</button><div id="coout" class="result"></div></div>

@@ -121,6 +121,40 @@ function updateModTargets(){
   const row=modRows.find(r=>r["現在キー"]===byId("mk1")?.value);
   opts("mk2",recommendedTargets(row));
 }
+function parseKey(key){
+  const m=String(key||"").match(/^([A-G](?:#|b)?)(m)?$/);
+  return m&&NOTE_PC[m[1]]!==undefined?{name:key,root:m[1],pc:NOTE_PC[m[1]],minor:!!m[2]}:null;
+}
+function chordName(pc,suffix,key){return `${noteNameForKey((pc+12)%12,key)}${suffix}`}
+function diatonicChords(key){
+  const k=parseKey(key); if(!k)return[];
+  const steps=k.minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
+  const qualities=k.minor?["m","dim","","m","m","",""]:["","m","m","","","m","dim"];
+  return steps.map((step,i)=>({pc:(k.pc+step)%12,quality:qualities[i],name:chordName(k.pc+step,qualities[i],key)}));
+}
+function returnRoutes(originalKey,awayKey){
+  const home=parseKey(originalKey),away=parseKey(awayKey); if(!home||!away)return[];
+  const tonic=originalKey;
+  const dominant=chordName(home.pc+7,"7",originalKey);
+  const flatTwo=chordName(home.pc+1,"7",originalKey);
+  const flatSix=chordName(home.pc+8,"maj7",originalKey);
+  const ii=chordName(home.pc+2,home.minor?"m7♭5":"m7",originalKey);
+  const shared=diatonicChords(awayKey).find(a=>diatonicChords(originalKey).some(h=>h.pc===a.pc&&h.quality===a.quality));
+  const subtle=shared
+    ?[awayKey,shared.name,chordName(home.pc,home.minor?"m6":"6/9",originalKey)]
+    :[awayKey,chordName(home.pc+5,home.minor?"m":"",originalKey),chordName(home.pc,home.minor?"m6":"6/9",originalKey)];
+  return [
+    {title:"🎬 ドラマチックな戻り方",progression:[awayKey,flatSix,`${dominant}(♭9)`,tonic],note:"借用和音から緊張感の強いドミナントを経由し、元のキーへ大きく着地します。サビ前や終盤向けです。"},
+    {title:"🌫 いつの間にか戻っている方法",progression:subtle,note:shared?`${shared.name}を両方のキーに含まれる共通コードとして使い、強い終止感を避けて戻ります。`:"ドミナントを強調せず、元のキーのIVから色をなじませて戻ります。"},
+    {title:"⚡ 強烈な違和感・印象を残す戻り方",progression:[awayKey,flatTwo,tonic],note:"元のキーの半音上にある属7コードから直接戻る、トライトーン代理を使った強い色変化です。"},
+    {title:"🏠 いかにも戻りました的な方法",progression:[awayKey,ii,dominant,tonic],note:`元のキーの${home.minor?"iiø–V7–i":"ii–V7–I"}で、帰還をはっきり聴かせます。`}
+  ];
+}
+function renderReturnRoutes(originalKey,awayKey){
+  const routes=returnRoutes(originalKey,awayKey);
+  return `<div class="resultbox"><b>↩️ 転調後から元のキーへ戻る</b><div class="muted">${esc(awayKey)}から${esc(originalKey)}へ戻る例です。各コードは1小節ずつを目安に、耳で鳴り方を確認してください。</div></div>`+
+    routes.map(r=>`<div class="resultbox"><b>${esc(r.title)}</b><div class="value">${r.progression.map(esc).join(" → ")}</div><div class="muted">${esc(r.note)}</div></div>`).join("");
+}
 updateModTargets();
 byId("mk1")?.addEventListener("change",updateModTargets);
 byId("mbtn")?.addEventListener("click",()=>{
@@ -129,7 +163,8 @@ byId("mbtn")?.addEventListener("click",()=>{
   if(!row){e.innerHTML='<div class="muted">転調データがありません。</div>';return}
   const rec=recommendedTargets(row),ok=rec.includes(to);
   e.innerHTML=`<div class="resultbox"><b>${esc(from)} → ${esc(to)}</b><div class="value ${ok?"statusGood":"statusWarn"}">${ok?"DBの推奨候補に含まれます":"DBの推奨候補外です"}</div><div class="muted">推奨候補：${esc(rec.join(" / "))}</div></div>`+
-    `<div class="resultbox">${Object.entries(row).map(([k,v])=>`<div class="item"><b>${esc(k)}</b><div class="value">${esc(v)}</div></div>`).join("")}</div>`;
+    `<div class="resultbox">${Object.entries(row).map(([k,v])=>`<div class="item"><b>${esc(k)}</b><div class="value">${esc(v)}</div></div>`).join("")}</div>`+
+    renderReturnRoutes(from,to);
 });
 
 // ---------- Core DB tools ----------
