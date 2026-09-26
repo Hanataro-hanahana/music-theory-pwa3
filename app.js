@@ -177,6 +177,31 @@ byId("cobtn")?.addEventListener("click",()=>render("coout",rows("DB_作曲").fil
 byId("mebtn")?.addEventListener("click",()=>render("meout",rows("DB_メロディ").filter(r=>r["進行タイプ"]===byId("me")?.value)));
 byId("arbtn")?.addEventListener("click",()=>render("arout",rows("DB_アレンジ").filter(r=>r["方向/進行"]===byId("ar")?.value)));
 
+// ---------- Alternate tuning dictionary ----------
+const ALTERNATE_TUNINGS=[
+  {name:"半音下げ",notes:"E♭–A♭–D♭–G♭–B♭–E♭",change:"全弦を半音下げる",feature:"標準チューニングの運指を変えずに、全体を半音低くできます。音が少し太く柔らかくなり、歌の音域調整にも便利です。",use:"ロック、グランジ、歌のキーを半音下げたい場面",shapes:["Eフォーム → 実音E♭：0-2-2-1-0-0","Aフォーム → 実音A♭：×-0-2-2-2-0","Gフォーム → 実音G♭：3-2-0-0-0-3"],tip:"コードフォームは標準と同じですが、鳴る実音はすべて半音下です。"},
+  {name:"全音下げ",notes:"D–G–C–F–A–D",change:"全弦を1音下げる",feature:"標準運指のまま全体を1音低くし、重く落ち着いた響きにします。弦の張りも柔らかくなります。",use:"ヘヴィロック、低い歌声、太いクリーントーン",shapes:["Eフォーム → 実音D：0-2-2-1-0-0","Aフォーム → 実音G：×-0-2-2-2-0","Cフォーム → 実音B♭：×-3-2-0-1-0"],tip:"弦が緩く感じる場合は、少し太いゲージを検討してください。"},
+  {name:"Drop D",notes:"D–A–D–G–B–E",change:"6弦だけEからDへ1音下げる",feature:"低いDを加えつつ、1〜5弦は標準のままです。6〜4弦を同じフレットで押さえるだけでパワーコードになります。",use:"ロック、オルタナ、メタル、低音リフ",shapes:["D5：0-0-0-×-×-×","G5：5-5-5-×-×-×","A5：7-7-7-×-×-×","D：0-0-0-2-3-2"],tip:"通常の6弦ルートコードは形が変わります。1〜5弦側のフォームは標準と同じです。"},
+  {name:"Double Drop D",notes:"D–A–D–G–B–D",change:"6弦と1弦をDへ下げる",feature:"低音と高音の両方にDが残るため、ドローン感の強い響きになります。開放弦を残したコード移動に向きます。",use:"フォーク、クラシックロック、ドローン系アルペジオ",shapes:["D5：0-0-0-×-×-0","G：5-5-5-0-0-0","Dsus4：0-0-0-0-3-0"],tip:"1弦がDになっているため、標準チューニングのコードで1弦を鳴らす場合は音を確認してください。"},
+  {name:"DADGAD",notes:"D–A–D–G–A–D",change:"6弦をD、2弦をA、1弦をDへ下げる",feature:"開放弦だけでDsus4になります。3度が曖昧で、明るさと暗さの中間にある民族的・浮遊感のある響きです。",use:"ケルト、フォーク、アンビエント、ドローン",shapes:["Dsus4：0-0-0-0-0-0","D5：0-0-0-2-0-0","Gsus2：5-0-0-0-0-0","A7sus4：×-0-2-0-0-0"],tip:"メジャー／マイナーを決める3度の音を必要な場面だけ加えると使いやすくなります。"},
+  {name:"Open D",notes:"D–A–D–F♯–A–D",change:"開放弦がDメジャーになるよう調整",feature:"開放弦だけでDメジャー。全弦バレーを横移動するだけでメジャーコードを作れ、スライド奏法にも向きます。",use:"ブルース、フォーク、スライドギター",shapes:["D：0-0-0-0-0-0","G：5-5-5-5-5-5","A：7-7-7-7-7-7","Bm7：×-2-4-3-2-0"],tip:"標準より下げる弦が中心なので比較的安全ですが、変更後は必ず再調整してください。"},
+  {name:"Open E",notes:"E–B–E–G♯–B–E",change:"開放弦がEメジャーになるよう調整",feature:"開放弦だけでEメジャー。Open Dと同じ関係のフォームを2フレット高い実音で使えます。",use:"ブルース、ロック、スライドギター",shapes:["E：0-0-0-0-0-0","A/E：5-5-5-5-5-5","B/F♯：7-7-7-7-7-7"],tip:"5・4・3弦を上げるため弦とネックへの負担が増えます。Open D＋2フレットカポの使用を推奨します。"},
+  {name:"Open G",notes:"D–G–D–G–B–D",change:"6・5・1弦を下げ、開放弦をGメジャーにする",feature:"開放弦だけでGメジャー。全弦バレーと開放弦を使った太いリフが作りやすい定番チューニングです。",use:"ブルース、クラシックロック、スライドギター",shapes:["G：0-0-0-0-0-0","C/G：5-5-5-5-5-5","D/A：7-7-7-7-7-7","G5：0-0-0-0-×-0"],tip:"低い6弦Dが不要なときはミュートすると、ルートが明確になります。"},
+  {name:"Open C",notes:"C–G–C–G–C–E",change:"開放弦がCメジャーになるよう大きく下げる",feature:"音域が広く、深い低音と開放的な高音が同時に鳴ります。全弦バレーで主要なメジャーコードを移動できます。",use:"フィンガースタイル、アンビエント、重厚な弾き語り",shapes:["C：0-0-0-0-0-0","F：5-5-5-5-5-5","G：7-7-7-7-7-7","C5：0-0-0-0-0-×"],tip:"6弦をCまで下げるため、通常ゲージでは音程が不安定になる場合があります。"},
+  {name:"FACGCE",notes:"F–A–C–G–C–E",change:"6弦をF、4弦をC、2弦をCへ変更",feature:"開放弦でFmaj9系の響きになります。隣接音や開放弦が重なり、透明感と切なさのあるコードを作りやすいチューニングです。",use:"エモ、マスロック、ポストロック、アルペジオ",shapes:["Fmaj9：0-0-0-0-0-0","Gmaj9：2-2-2-2-2-2","Amaj9：4-4-4-4-4-4","F5(add9)：0-×-0-0-0-×"],tip:"6弦と2弦を上げるため張力に注意してください。細い弦や古い弦では無理に上げないでください。"}
+];
+function renderAlternateTuning(){
+  const name=byId("tuningSelect")?.value,t=ALTERNATE_TUNINGS.find(x=>x.name===name),out=byId("tuningOut");if(!out||!t)return;
+  out.innerHTML=`<div class="resultbox"><b>${esc(t.name)}</b><div class="scaleNotes">${t.notes.split("–").map(n=>`<span class="tag">${esc(n)}</span>`).join("")}</div><div class="muted">6弦 → 1弦</div></div>`+
+    `<div class="resultbox"><div class="item"><b>変更方法</b><div class="value">${esc(t.change)}</div></div><div class="item"><b>特徴</b><div class="value">${esc(t.feature)}</div></div><div class="item"><b>向いている用途</b><div class="value">${esc(t.use)}</div></div></div>`+
+    `<div class="resultbox"><b>基本の押さえ方</b>${t.shapes.map(s=>`<div class="item"><div class="value">${esc(s)}</div></div>`).join("")}<div class="muted">表記は6弦→1弦。0＝開放、×＝ミュート。</div></div>`+
+    `<div class="compactNotice"><b>注意：</b>${esc(t.tip)}</div>`;
+}
+opts("tuningSelect",ALTERNATE_TUNINGS.map(t=>t.name));
+renderAlternateTuning();
+byId("tuningBtn")?.addEventListener("click",renderAlternateTuning);
+byId("tuningSelect")?.addEventListener("change",renderAlternateTuning);
+
 // ---------- Fraction chords ----------
 const F=rows("DB_分数コード");
 const fvals=k=>uniq(F.map(r=>r[k]));
