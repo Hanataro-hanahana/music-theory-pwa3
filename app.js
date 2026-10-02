@@ -202,6 +202,60 @@ renderAlternateTuning();
 byId("tuningBtn")?.addEventListener("click",renderAlternateTuning);
 byId("tuningSelect")?.addEventListener("change",renderAlternateTuning);
 
+// ---------- Lyric idea helper ----------
+const LYRIC_KEYWORDS=["雨上がり","未送信","境界線","足音","残響","夜明け前","体温","遠回り","忘れ物","空席","青信号","古い写真","ノイズ","帰り道","約束","透明","まばたき","潮風","改札","傷跡","微熱","流星","白い息","逆光","沈黙","水たまり","影","片道切符","カーテン","屋上","終電","金木犀","交差点","イヤホン","夏の終わり","秒針","合鍵","水平線","ネオン","手紙"];
+const LYRIC_EMOTIONS=["届かない憧れ","静かな怒り","別れた後の安堵","理由のない焦り","懐かしさと後悔","強がりの奥の寂しさ","誰にも言えない期待","失う前の幸福","再会への怖さ","諦めきれない気持ち","少しだけ残った希望","置いていかれる不安","許したいのに許せない","自由になった孤独","日常が壊れる予感","報われない優しさ","忘れたくない痛み","新しく始める勇気"];
+const LYRIC_PROPER_NOUNS=["東京タワー","渋谷駅","新宿駅","横浜港","江ノ島","鎌倉","下北沢","吉祥寺","神戸港","札幌駅","函館","京都駅","鴨川","大阪城","瀬戸内海","富士山","隅田川","レインボーブリッジ","国道246号","中央線","山手線","東海道線","羽田空港","成田空港","太平洋","オリオン座","北極星","金星","月","火星","シリウス","カシオペヤ座","クリスマス","ハロウィン","七夕","午前零時","4月1日","8月31日","12月24日","日曜日"];
+function randomItem(items){return items[Math.floor(Math.random()*items.length)]}
+function randomUnique(items,count){const pool=[...items],out=[];while(out.length<count&&pool.length){out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0])}return out}
+function renderLyricIdeas(){
+  const out=byId("lyricOut");if(!out)return;const nouns=randomUnique(LYRIC_PROPER_NOUNS,3+Math.floor(Math.random()*3));
+  out.innerHTML=`<div class="lyricPrompt"><h3>キーワード</h3><div class="value">${esc(randomItem(LYRIC_KEYWORDS))}</div></div>`+
+    `<div class="lyricPrompt"><h3>感情</h3><div class="value">${esc(randomItem(LYRIC_EMOTIONS))}</div></div>`+
+    `<div class="lyricPrompt"><h3>歌詞に入れる固有名詞（3〜5個）</h3><div class="lyricNouns">${nouns.map(n=>`<span class="tag">${esc(n)}</span>`).join("")}</div></div>`;
+}
+renderLyricIdeas();
+byId("lyricShuffle")?.addEventListener("click",renderLyricIdeas);
+
+// ---------- Guitar / bass fretboard guide ----------
+const FRET_TUNINGS={
+  guitar:[
+    {name:"標準（E–A–D–G–B–E）",pcs:[4,9,2,7,11,4]},
+    {name:"半音下げ（E♭–A♭–D♭–G♭–B♭–E♭）",pcs:[3,8,1,6,10,3]},
+    {name:"全音下げ（D–G–C–F–A–D）",pcs:[2,7,0,5,9,2]},
+    {name:"Drop D（D–A–D–G–B–E）",pcs:[2,9,2,7,11,4]},
+    {name:"Double Drop D（D–A–D–G–B–D）",pcs:[2,9,2,7,11,2]},
+    {name:"DADGAD（D–A–D–G–A–D）",pcs:[2,9,2,7,9,2]},
+    {name:"Open D（D–A–D–F♯–A–D）",pcs:[2,9,2,6,9,2]},
+    {name:"Open E（E–B–E–G♯–B–E）",pcs:[4,11,4,8,11,4]},
+    {name:"Open G（D–G–D–G–B–D）",pcs:[2,7,2,7,11,2]},
+    {name:"Open C（C–G–C–G–C–E）",pcs:[0,7,0,7,0,4]},
+    {name:"FACGCE（F–A–C–G–C–E）",pcs:[5,9,0,7,0,4]}
+  ],
+  bass:[{name:"標準（E–A–D–G）",pcs:[4,9,2,7]}]
+};
+function updateFretTuningOptions(){
+  const instrument=byId("fretInstrument")?.value||"guitar";opts("fretTuning",FRET_TUNINGS[instrument].map(t=>t.name));drawFretGuide();
+}
+function drawFretGuide(){
+  const instrument=byId("fretInstrument")?.value||"guitar",tuning=FRET_TUNINGS[instrument].find(t=>t.name===byId("fretTuning")?.value)||FRET_TUNINGS[instrument][0];
+  const notes=byId("fretAccidental")?.value==="flat"?FLAT_NAMES:SHARP_NAMES,board=byId("fretGuideBoard"),info=byId("fretGuideInfo");if(!board||!tuning)return;
+  const markers=new Set([3,5,7,9,12,15,17,19,21,24]),count=tuning.pcs.length;
+  board.style.gridTemplateColumns="62px repeat(25,38px)";
+  let html='<div class="fretGuideHead">弦 / F</div>'+Array.from({length:25},(_,f)=>`<div class="fretGuideHead">${f}</div>`).join("");
+  tuning.pcs.slice().reverse().forEach((openPc,row)=>{
+    const stringNo=row+1;html+=`<div class="fretGuideString">${stringNo}弦</div>`;
+    for(let fret=0;fret<=24;fret++){const classes=["fretGuideCell"];if(fret===0)classes.push("open");else if(markers.has(fret))classes.push("marker");html+=`<div class="${classes.join(" ")}" title="${stringNo}弦 ${fret}フレット">${esc(notes[(openPc+fret)%12])}</div>`}
+  });
+  board.innerHTML=html;
+  if(info)info.innerHTML=`<div class="resultbox"><b>${instrument==="guitar"?"ギター":"ベース"}｜${esc(tuning.name)}</b><div class="muted">${count}弦→1弦：${esc(tuning.pcs.map(pc=>notes[pc]).join("–"))}　／　0〜24フレット</div></div>`;
+}
+updateFretTuningOptions();
+byId("fretInstrument")?.addEventListener("change",updateFretTuningOptions);
+byId("fretAccidental")?.addEventListener("change",drawFretGuide);
+byId("fretTuning")?.addEventListener("change",drawFretGuide);
+byId("fretGuideBtn")?.addEventListener("click",drawFretGuide);
+
 // ---------- Fraction chords ----------
 const F=rows("DB_分数コード");
 const fvals=k=>uniq(F.map(r=>r[k]));
