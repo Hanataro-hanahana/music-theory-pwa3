@@ -220,17 +220,17 @@ byId("lyricShuffle")?.addEventListener("click",renderLyricIdeas);
 // ---------- Guitar / bass fretboard guide ----------
 const FRET_TUNINGS={
   guitar:[
-    {name:"標準（E–A–D–G–B–E）",pcs:[4,9,2,7,11,4]},
-    {name:"半音下げ（E♭–A♭–D♭–G♭–B♭–E♭）",pcs:[3,8,1,6,10,3]},
-    {name:"全音下げ（D–G–C–F–A–D）",pcs:[2,7,0,5,9,2]},
-    {name:"Drop D（D–A–D–G–B–E）",pcs:[2,9,2,7,11,4]},
-    {name:"Double Drop D（D–A–D–G–B–D）",pcs:[2,9,2,7,11,2]},
-    {name:"DADGAD（D–A–D–G–A–D）",pcs:[2,9,2,7,9,2]},
-    {name:"Open D（D–A–D–F♯–A–D）",pcs:[2,9,2,6,9,2]},
-    {name:"Open E（E–B–E–G♯–B–E）",pcs:[4,11,4,8,11,4]},
-    {name:"Open G（D–G–D–G–B–D）",pcs:[2,7,2,7,11,2]},
-    {name:"Open C（C–G–C–G–C–E）",pcs:[0,7,0,7,0,4]},
-    {name:"FACGCE（F–A–C–G–C–E）",pcs:[5,9,0,7,0,4]}
+    {name:"標準（E–A–D–G–B–E）",pcs:[4,9,2,7,11,4],midi:[40,45,50,55,59,64]},
+    {name:"半音下げ（E♭–A♭–D♭–G♭–B♭–E♭）",pcs:[3,8,1,6,10,3],midi:[39,44,49,54,58,63]},
+    {name:"全音下げ（D–G–C–F–A–D）",pcs:[2,7,0,5,9,2],midi:[38,43,48,53,57,62]},
+    {name:"Drop D（D–A–D–G–B–E）",pcs:[2,9,2,7,11,4],midi:[38,45,50,55,59,64]},
+    {name:"Double Drop D（D–A–D–G–B–D）",pcs:[2,9,2,7,11,2],midi:[38,45,50,55,59,62]},
+    {name:"DADGAD（D–A–D–G–A–D）",pcs:[2,9,2,7,9,2],midi:[38,45,50,55,57,62]},
+    {name:"Open D（D–A–D–F♯–A–D）",pcs:[2,9,2,6,9,2],midi:[38,45,50,54,57,62]},
+    {name:"Open E（E–B–E–G♯–B–E）",pcs:[4,11,4,8,11,4],midi:[40,47,52,56,59,64]},
+    {name:"Open G（D–G–D–G–B–D）",pcs:[2,7,2,7,11,2],midi:[38,43,50,55,59,62]},
+    {name:"Open C（C–G–C–G–C–E）",pcs:[0,7,0,7,0,4],midi:[36,43,48,55,60,64]},
+    {name:"FACGCE（F–A–C–G–C–E）",pcs:[5,9,0,7,0,4],midi:[41,45,48,55,60,64]}
   ],
   bass:[{name:"標準（E–A–D–G）",pcs:[4,9,2,7]}]
 };
@@ -757,9 +757,10 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 
 // ---------- Reverse chord finder ----------
 const reverseFrets=Array(6).fill(-1); // 6th string -> 1st string
+function reverseTuning(){return FRET_TUNINGS.guitar.find(t=>t.name===byId("reverseTuning")?.value)||FRET_TUNINGS.guitar[0]}
 function setEquals(a,b){return a.size===b.size&&[...a].every(x=>b.has(x))}
 function setSubset(a,b){return[...a].every(x=>b.has(x))}
-function reverseSounding(){return reverseFrets.map((f,i)=>f>=0?{stringIndex:i,stringNo:6-i,fret:f,pc:(TUNING_PC[i]+f)%12,midi:TUNING_MIDI[i]+f,note:SHARP_NAMES[(TUNING_PC[i]+f)%12]}:null).filter(Boolean)}
+function reverseSounding(){const tuning=reverseTuning();return reverseFrets.map((f,i)=>f>=0?{stringIndex:i,stringNo:6-i,fret:f,pc:(tuning.pcs[i]+f)%12,midi:tuning.midi[i]+f,note:SHARP_NAMES[(tuning.pcs[i]+f)%12]}:null).filter(Boolean)}
 function reverseDisplayName(row,lowestPc){const code=row["コード"],root=NOTE_PC[parseChordName(code)?.root];return lowestPc!==undefined&&root!==undefined&&lowestPc!==root?`${code}/${SHARP_NAMES[lowestPc]}`:code}
 function reverseMatches(inputSet,lowestPc){
   if(inputSet.size<2)return[];
@@ -778,7 +779,7 @@ function reverseMatches(inputSet,lowestPc){
 }
 function renderReverse(){
   const sounding=reverseSounding(),inputSet=new Set(sounding.map(x=>x.pc)),lowest=sounding.slice().sort((a,b)=>a.midi-b.midi)[0],summary=byId("reverseSummary"),results=byId("reverseResults"),completion=byId("reverseCompletion");
-  if(summary)summary.innerHTML=sounding.length?`<div class="reverseSummary"><b>入力中の実音：</b>${uniq(sounding.map(x=>x.note)).map(n=>`<span class="tag">${esc(n)}</span>`).join("")}<div class="muted">最低音：${esc(lowest.note)}｜6弦→1弦：${esc(fingeringText(reverseFrets))}</div></div>`:'<div class="muted">指板をタップしてください。</div>';
+  if(summary)summary.innerHTML=sounding.length?`<div class="reverseSummary"><b>入力中の実音：</b>${uniq(sounding.map(x=>x.note)).map(n=>`<span class="tag">${esc(n)}</span>`).join("")}<div class="muted">チューニング：${esc(reverseTuning().name)}<br>最低音：${esc(lowest.note)}｜6弦→1弦：${esc(fingeringText(reverseFrets))}</div></div>`:`<div class="muted">${esc(reverseTuning().name)}の指板をタップしてください。</div>`;
   if(inputSet.size<2){if(results)results.innerHTML='<div class="muted">別の音高を含む2音以上を入力すると検索します。</div>';if(completion)completion.innerHTML='<div class="muted">2音以上入力すると表示します。</div>';return}
   const matches=reverseMatches(inputSet,lowest?.pc),top=matches.slice(0,18);
   if(results)results.innerHTML=top.length?top.map(x=>`<div class="reverseCandidate ${x.type}"><b>${esc(x.name)}</b><span class="matchBadge">${esc(x.label)} ${x.score}%</span><div class="muted">構成音：${esc(x.row["構成音"]||"")}${x.missing.length?`<br>省略中：${esc(x.missing.map(pc=>SHARP_NAMES[pc]).join(" / "))}`:""}</div></div>`).join(""):'<div class="muted">DB登録コードに候補がありません。</div>';
@@ -789,17 +790,20 @@ function renderReverse(){
 }
 function drawReverseBoard(){
   const board=byId("reverseBoard");if(!board)return;
+  const tuning=reverseTuning();
   let html='<div class="reverseCorner">弦/フレット</div><div class="reverseFretHead">×</div>'+Array.from({length:13},(_,f)=>`<div class="reverseFretHead">${f}</div>`).join("");
   for(let stringNo=1;stringNo<=6;stringNo++){
     const i=6-stringNo;html+=`<div class="reverseStringLabel">${stringNo}弦</div>`;
     html+=`<button type="button" class="reverseCell mute ${reverseFrets[i]<0?"selected":""}" data-reverse-string="${i}" data-reverse-fret="-1" aria-label="${stringNo}弦をミュート">×</button>`;
-    for(let f=0;f<=12;f++){const note=SHARP_NAMES[(TUNING_PC[i]+f)%12];html+=`<button type="button" class="reverseCell ${reverseFrets[i]===f?"selected":""}" data-reverse-string="${i}" data-reverse-fret="${f}" aria-label="${stringNo}弦 ${f}フレット ${note}"><span class="note">${note}</span></button>`}
+    for(let f=0;f<=12;f++){const note=SHARP_NAMES[(tuning.pcs[i]+f)%12];html+=`<button type="button" class="reverseCell ${reverseFrets[i]===f?"selected":""}" data-reverse-string="${i}" data-reverse-fret="${f}" aria-label="${stringNo}弦 ${f}フレット ${note}"><span class="note">${note}</span></button>`}
   }
   board.innerHTML=html;
   board.querySelectorAll("button[data-reverse-string]").forEach(b=>b.addEventListener("click",()=>{const i=Number(b.dataset.reverseString),f=Number(b.dataset.reverseFret);reverseFrets[i]=reverseFrets[i]===f?-1:f;drawReverseBoard();renderReverse()}));
 }
+opts("reverseTuning",FRET_TUNINGS.guitar.map(t=>t.name));
 drawReverseBoard();renderReverse();
 byId("reverseClear")?.addEventListener("click",()=>{reverseFrets.fill(-1);drawReverseBoard();renderReverse()});
+byId("reverseTuning")?.addEventListener("change",()=>{reverseFrets.fill(-1);drawReverseBoard();renderReverse()});
 
 // ---------- PWA ----------
 if("serviceWorker" in navigator){
